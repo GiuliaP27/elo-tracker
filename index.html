@@ -169,6 +169,8 @@ nav button.active {
 
   /* push main content above bottom bar */
   main { padding-bottom: calc(72px + env(safe-area-inset-bottom)); }
+  /* every section needs bottom breathing room so last content clears the tab bar */
+  .section { padding-bottom: calc(80px + env(safe-area-inset-bottom)); }
 
   /* compact header */
   .header-inner { height:48px; padding:0 1rem; }
@@ -291,7 +293,7 @@ input, select, textarea {
   border-radius: var(--radius-sm);
   color: var(--text-primary);
   font-family: var(--font-body);
-  font-size: 0.875rem;
+  font-size: 16px; /* prevents iOS auto-zoom on focus */
   padding: 0.55rem 0.8rem;
   outline: none;
   transition: border-color 0.15s, box-shadow 0.15s;
@@ -349,6 +351,7 @@ input[type=range] {
 }
 .btn-danger:hover:not(:disabled) { background:var(--red-soft); }
 .btn-sm { padding:0.3rem 0.65rem; font-size:0.75rem; }
+.icon-btn { padding:0.3rem 0.45rem; line-height:1; display:inline-flex; align-items:center; justify-content:center; }
 
 /* ── TABLE ───────────────────────────────────────────── */
 .table-wrap { overflow-x:auto; }
@@ -549,7 +552,7 @@ input[type=checkbox] { width:auto; accent-color:var(--accent); cursor:pointer; }
 .setting-row:last-child { border-bottom:none; }
 .gtag {
   font-size: 0.7rem; font-weight:500;
-  color: var(--text-tertiary);
+  color: var(--text-primary);
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 99px;
@@ -785,19 +788,38 @@ hr { border:none; border-top:1px solid var(--border-sub); margin:1rem 0; }
 <!-- ══ BOTTOM TAB BAR (mobile only) ══════════════════════ -->
 <div class="bottom-nav" id="bottom-nav">
   <button class="active" onclick="showSection('dashboard')">
-    <span class="tab-icon">📊</span>
+    <span class="tab-icon">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/>
+        <rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>
+      </svg>
+    </span>
     Dashboard
   </button>
   <button onclick="showSection('add-match')">
-    <span class="tab-icon">✚</span>
+    <span class="tab-icon">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="9"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/>
+      </svg>
+    </span>
     Partita
   </button>
   <button onclick="showSection('history')">
-    <span class="tab-icon">📋</span>
+    <span class="tab-icon">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+        <polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="13" y2="17"/>
+      </svg>
+    </span>
     Storico
   </button>
   <button onclick="showSection('settings')">
-    <span class="tab-icon">⚙</span>
+    <span class="tab-icon">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="3"/>
+        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+      </svg>
+    </span>
     Settings
   </button>
 </div>
@@ -1832,12 +1854,28 @@ function renderSettingsGames() {
   document.getElementById('games-list').innerHTML = games.map(g => {
     const warn = g.collaborative ? 'Collaborativo' : (g.minPlayers > 2 ? g.minPlayers+'+ giocatori' : null);
     const warnTag = warn ? '<span class="gtag warn">(!!) '+warn+'</span>' : '';
+    var escapedName = g.name.replace(/'/g,"\\'");
     return '<div class="setting-row">'+
-      '<span style="font-size:.88rem">'+g.name+'</span>'+
-      (warnTag||'<span class="gtag">Skill: '+g.skill.toFixed(2)+'</span>')+
-      '<span class="gtag" style="opacity:.7">C:'+g.complexity+'</span>'+
-      '<button class="btn btn-ghost btn-sm" onclick="editGame(\''+g.name.replace(/'/g,"\\'")+'\')" >[M]</button>'+
-      '<button class="btn btn-danger btn-sm" onclick="deleteGame(\''+g.name.replace(/'/g,"\\'")+'\')" >[X]</button>'+
+      '<span class="sname">'+g.name+'</span>'+
+      '<div class="stag-group">'+
+        (warnTag||'<span class="gtag">S: '+g.skill.toFixed(2)+'</span>')+
+        '<span class="gtag">C: '+g.complexity+'</span>'+
+      '</div>'+
+      '<div class="actions">'+
+        '<button class="btn btn-ghost btn-sm icon-btn" title="Modifica" onclick="editGame(\''+escapedName+'\')" >'+
+          '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'+
+            '<path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>'+
+            '<path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>'+
+          '</svg>'+
+        '</button>'+
+        '<button class="btn btn-danger btn-sm icon-btn" title="Elimina" onclick="deleteGame(\''+escapedName+'\')" >'+
+          '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'+
+            '<polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>'+
+            '<path d="M10 11v6"/><path d="M14 11v6"/>'+
+            '<path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>'+
+          '</svg>'+
+        '</button>'+
+      '</div>'+
     '</div>';
   }).join('') || '<div class="empty-state">Nessun gioco.</div>';
 }
