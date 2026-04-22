@@ -1,0 +1,2373 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ELO Board Games Tracker</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+/* ── RESET ───────────────────────────────────────────── */
+*, *::before, *::after { box-sizing:border-box; margin:0; padding:0; }
+
+/* ── TOKENS ─────────────────────────────────────────── */
+:root {
+  /* Claude dark palette */
+  --bg:          #1a1a1a;
+  --bg-elevated: #222222;
+  --surface:     #2a2a2a;
+  --surface-2:   #333333;
+  --border:      #3d3d3d;
+  --border-sub:  #2e2e2e;
+
+  /* Text */
+  --text-primary:   #ececec;
+  --text-secondary: #a0a0a0;
+  --text-tertiary:  #666666;
+
+  /* Accents — Claude orange-warm */
+  --accent:       #d97706;
+  --accent-soft:  rgba(217,119,6,0.12);
+  --accent-glow:  rgba(217,119,6,0.06);
+
+  /* Semantic */
+  --green:        #34d399;
+  --green-soft:   rgba(52,211,153,0.1);
+  --red:          #f87171;
+  --red-soft:     rgba(248,113,113,0.1);
+  --yellow:       #fbbf24;
+  --yellow-soft:  rgba(251,191,36,0.1);
+  --blue:         #60a5fa;
+  --blue-soft:    rgba(96,165,250,0.1);
+
+  /* Type */
+  --font-display: 'Aptos', 'Aptos Display', Calibri, 'Segoe UI', sans-serif;
+  --font-body:    'DM Sans', -apple-system, sans-serif;
+
+  /* Shape */
+  --radius-sm:  6px;
+  --radius-md:  10px;
+  --radius-lg:  16px;
+  --radius-xl:  20px;
+
+  /* Shadows */
+  --shadow-sm:  0 1px 3px rgba(0,0,0,0.4);
+  --shadow-md:  0 4px 12px rgba(0,0,0,0.5);
+  --shadow-lg:  0 8px 32px rgba(0,0,0,0.6);
+}
+
+/* ── BASE ────────────────────────────────────────────── */
+html { font-size:15px; }
+body {
+  background: var(--bg);
+  color: var(--text-primary);
+  font-family: var(--font-body);
+  font-weight: 400;
+  min-height: 100vh;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ── SCROLLBAR ───────────────────────────────────────── */
+::-webkit-scrollbar { width:6px; height:6px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius:99px; }
+
+/* ── LAYOUT ──────────────────────────────────────────── */
+.app-shell { display:flex; flex-direction:column; min-height:100vh; }
+main { flex:1; max-width:1160px; width:100%; margin:0 auto; padding:2rem 1.5rem; }
+.section { display:none; }
+.section.active { display:block; animation: fadeIn 0.15s ease; }
+@keyframes fadeIn { from { opacity:0; transform:translateY(4px); } to { opacity:1; transform:none; } }
+
+.grid-2 { display:grid; grid-template-columns:1fr 1fr; gap:1.25rem; }
+.grid-3 { display:grid; grid-template-columns:repeat(3,1fr); gap:1rem; }
+@media(max-width:860px) { .grid-2,.grid-3 { grid-template-columns:1fr; } }
+
+/* ── HEADER ──────────────────────────────────────────── */
+header {
+  border-bottom: 1px solid var(--border-sub);
+  background: var(--bg);
+  position: sticky; top:0; z-index:200;
+}
+.header-inner {
+  max-width:1160px; margin:0 auto;
+  padding: 0 1.5rem;
+  height: 56px;
+  display: flex; align-items:center; gap:1.5rem;
+}
+.logo {
+  display: flex; align-items:center; gap:0.6rem;
+  text-decoration:none;
+}
+.logo-icon {
+  width:28px; height:28px;
+  background: var(--accent-soft);
+  border: 1px solid rgba(217,119,6,0.3);
+  border-radius: var(--radius-sm);
+  display:flex; align-items:center; justify-content:center;
+  font-size:14px;
+}
+.logo-text {
+  font-family: var(--font-display);
+  font-size: 1.1rem;
+  color: var(--text-primary);
+  letter-spacing: -0.01em;
+}
+.logo-sub {
+  font-size:0.72rem;
+  color: var(--text-tertiary);
+  font-weight:300;
+  letter-spacing:0.05em;
+}
+
+/* ── NAV — desktop pill bar ──────────────────────────── */
+nav {
+  margin-left:auto;
+  display:flex; gap:2px;
+  background: var(--surface);
+  border:1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 3px;
+}
+nav button {
+  background: none; border: none;
+  color: var(--text-secondary);
+  font-family: var(--font-body);
+  font-size: 0.8rem;
+  font-weight: 500;
+  padding: 0.35rem 0.9rem;
+  border-radius: calc(var(--radius-lg) - 4px);
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+nav button:hover { color:var(--text-primary); background:var(--surface-2); }
+nav button.active {
+  background: var(--bg-elevated);
+  color: var(--text-primary);
+  box-shadow: var(--shadow-sm);
+}
+
+/* ── BOTTOM TAB BAR — mobile ─────────────────────────── */
+@media(max-width:640px) {
+  /* hide desktop nav */
+  header nav { display:none; }
+
+  /* show bottom bar */
+  .bottom-nav {
+    display: flex !important;
+    position: fixed;
+    bottom: 0; left: 0; right: 0;
+    z-index: 300;
+    background: var(--bg-elevated);
+    border-top: 1px solid var(--border);
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  /* push main content above bottom bar */
+  main { padding-bottom: calc(72px + env(safe-area-inset-bottom)); }
+
+  /* compact header */
+  .header-inner { height:48px; padding:0 1rem; }
+  .logo-sub { display:none; }
+}
+
+.bottom-nav {
+  display: none; /* hidden on desktop */
+}
+.bottom-nav button {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  background: none;
+  border: none;
+  color: var(--text-tertiary);
+  font-family: var(--font-body);
+  font-size: 0.62rem;
+  font-weight: 500;
+  letter-spacing: 0.03em;
+  padding: 0.45rem 0.1rem;
+  cursor: pointer;
+  transition: color 0.15s;
+  -webkit-tap-highlight-color: transparent;
+}
+.bottom-nav button .tab-icon {
+  font-size: 1rem;
+  line-height: 1;
+  transition: transform 0.15s;
+}
+.bottom-nav button:active .tab-icon { transform: scale(0.9); }
+.bottom-nav button.active { color: var(--accent); }
+.bottom-nav button.active .tab-icon { opacity:1; }
+
+/* ── SECTION HEADER ──────────────────────────────────── */
+.section-header {
+  display:flex; align-items:baseline;
+  justify-content:space-between;
+  margin-bottom: 1.5rem;
+  flex-wrap:wrap; gap:0.75rem;
+}
+.section-title {
+  font-family: var(--font-display);
+  font-size: 1.75rem;
+  font-weight: 400;
+  color: var(--text-primary);
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+}
+.section-meta { font-size:0.8rem; color:var(--text-tertiary); }
+
+/* ── CARD ────────────────────────────────────────────── */
+.card {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 1.25rem;
+}
+.card + .card { margin-top:1.25rem; }
+.card-title {
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+  margin-bottom: 1rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid var(--border-sub);
+}
+
+/* ── STAT BOXES ──────────────────────────────────────── */
+.stat-row { display:flex; gap:0.75rem; margin-bottom:1.25rem; flex-wrap:wrap; }
+.stat-box {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 1rem 1.25rem;
+  flex:1; min-width:120px;
+  position: relative; overflow:hidden;
+}
+.stat-box::before {
+  content:'';
+  position:absolute; top:0; left:0; right:0; height:2px;
+  background: linear-gradient(90deg, var(--accent), transparent);
+  opacity:0.5;
+}
+.stat-box .val {
+  font-family: var(--font-display);
+  font-size: 2rem;
+  color: var(--text-primary);
+  line-height: 1;
+  letter-spacing: -0.02em;
+}
+.stat-box .lbl {
+  font-size: 0.7rem;
+  font-weight: 500;
+  color: var(--text-tertiary);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  margin-top: 0.35rem;
+}
+
+/* ── FORM ────────────────────────────────────────────── */
+.form-group { margin-bottom: 0.875rem; }
+label {
+  display: block;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+  margin-bottom: 0.35rem;
+  letter-spacing: 0.02em;
+}
+input, select, textarea {
+  width: 100%;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  font-family: var(--font-body);
+  font-size: 0.875rem;
+  padding: 0.55rem 0.8rem;
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+  -webkit-appearance: none;
+}
+input:focus, select:focus, textarea:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+input::placeholder, textarea::placeholder { color:var(--text-tertiary); }
+select option { background: var(--surface-2); color:var(--text-primary); }
+select option.opt-blocked { color: var(--yellow); }
+textarea { resize:vertical; min-height:70px; }
+
+/* range slider */
+input[type=range] {
+  padding:0; height:auto;
+  accent-color: var(--accent);
+  cursor:pointer;
+}
+
+.inline-2 { display:grid; grid-template-columns:1fr 1fr; gap:0.75rem; }
+.inline-3 { display:grid; grid-template-columns:1fr 1fr 1fr; gap:0.75rem; }
+@media(max-width:560px) { .inline-2,.inline-3 { grid-template-columns:1fr; } }
+
+/* ── BUTTONS ─────────────────────────────────────────── */
+.btn {
+  display: inline-flex; align-items:center; gap:0.4rem;
+  font-family: var(--font-body);
+  font-size: 0.8rem;
+  font-weight: 500;
+  padding: 0.5rem 1rem;
+  border-radius: var(--radius-sm);
+  border: none; cursor:pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+  letter-spacing: 0.01em;
+}
+.btn:disabled { opacity:0.4; cursor:not-allowed; }
+.btn-primary {
+  background: var(--accent);
+  color: #fff;
+}
+.btn-primary:hover:not(:disabled) { background:#b45309; }
+.btn-ghost {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--text-secondary);
+}
+.btn-ghost:hover:not(:disabled) { border-color:var(--accent); color:var(--text-primary); }
+.btn-danger {
+  background: none;
+  border: 1px solid rgba(248,113,113,0.3);
+  color: var(--red);
+}
+.btn-danger:hover:not(:disabled) { background:var(--red-soft); }
+.btn-sm { padding:0.3rem 0.65rem; font-size:0.75rem; }
+
+/* ── TABLE ───────────────────────────────────────────── */
+.table-wrap { overflow-x:auto; }
+table { width:100%; border-collapse:collapse; font-size:0.83rem; }
+th {
+  text-align:left;
+  font-size:0.7rem;
+  font-weight:600;
+  letter-spacing:0.06em;
+  text-transform:uppercase;
+  color: var(--text-tertiary);
+  padding: 0.5rem 0.75rem;
+  border-bottom: 1px solid var(--border);
+}
+td {
+  padding: 0.65rem 0.75rem;
+  border-bottom: 1px solid var(--border-sub);
+  color: var(--text-primary);
+  vertical-align: middle;
+}
+tbody tr { transition:background 0.1s; }
+tbody tr:hover td { background: var(--surface); }
+tbody tr:last-child td { border-bottom:none; }
+
+/* ── RANKING ─────────────────────────────────────────── */
+.rank-medal {
+  width:26px; height:26px;
+  border-radius:50%;
+  display:inline-flex; align-items:center; justify-content:center;
+  font-size:0.75rem; font-weight:700;
+  flex-shrink:0;
+}
+.rank-medal.gold   { background:rgba(251,191,36,0.15); color:#fbbf24; border:1px solid rgba(251,191,36,0.3); }
+.rank-medal.silver { background:rgba(156,163,175,0.15); color:#9ca3af; border:1px solid rgba(156,163,175,0.3); }
+.rank-medal.bronze { background:rgba(180,120,80,0.15); color:#b47850; border:1px solid rgba(180,120,80,0.3); }
+.rank-medal.plain  { background:var(--surface); color:var(--text-tertiary); border:1px solid var(--border); }
+
+.elo-value { font-family:var(--font-display); font-size:1.05rem; color:var(--text-primary); }
+.elo-delta { font-size:0.75rem; font-weight:500; }
+.elo-delta.pos { color:var(--green); }
+.elo-delta.neg { color:var(--red); }
+
+.wr-bar { display:flex; align-items:center; gap:0.5rem; }
+.wr-bar .track { height:4px; background:var(--border); border-radius:99px; flex:1; min-width:50px; overflow:hidden; }
+.wr-bar .fill  { height:100%; background:var(--accent); border-radius:99px; }
+.wr-bar .pct   { font-size:0.75rem; color:var(--text-secondary); min-width:28px; text-align:right; }
+
+/* ── BADGES ──────────────────────────────────────────── */
+.badge {
+  display:inline-flex; align-items:center; gap:0.25rem;
+  font-size:0.7rem; font-weight:600;
+  padding: 0.2rem 0.55rem;
+  border-radius: 99px;
+}
+.badge-win  { background:var(--green-soft); color:var(--green); border:1px solid rgba(52,211,153,0.2); }
+.badge-draw { background:var(--surface); color:var(--text-tertiary); border:1px solid var(--border); }
+.badge-mil  { background:var(--red-soft); color:var(--red); border:1px solid rgba(248,113,113,0.2); }
+.badge-sci  { background:var(--blue-soft); color:var(--blue); border:1px solid rgba(96,165,250,0.2); }
+
+/* ── CHART ───────────────────────────────────────────── */
+.chart-wrap { position:relative; height:260px; }
+
+/* ══ DASHBOARD CONTAINER ════════════════════════════════ */
+.dash-container {
+  margin: 0 16px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* 2x2 stat grid */
+.stat-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+
+/* each dashboard block (ranking, chart, recent) */
+.dash-block {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 1rem;
+  width: 100%;
+}
+
+/* ranking table: cells hug content, row scrolls */
+.rank-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+.rank-table  { width: 100%; table-layout: auto; }
+.rank-table th,
+.rank-table td { white-space: nowrap; }
+
+/* section header sits outside the container with same 16px margin */
+#dashboard .section-header {
+  margin-left: 16px;
+  margin-right: 16px;
+}
+
+/* full-width header */
+header { width: 100%; box-sizing: border-box; }
+.header-inner { width: 100%; max-width: 100%; }
+
+/* ── FORMULA BOX ─────────────────────────────────────── */
+.formula-box {
+  background: var(--accent-glow);
+  border: 1px solid rgba(217,119,6,0.2);
+  border-radius: var(--radius-md);
+  padding: 0.875rem 1rem;
+  font-size:0.78rem;
+  color: var(--text-secondary);
+  line-height:1.9;
+  margin-bottom:1.25rem;
+}
+.formula-box strong { color:var(--accent); font-weight:600; }
+
+/* ── GAME WARNING ────────────────────────────────────── */
+#game-warning {
+  display:none;
+  background: var(--yellow-soft);
+  border: 1px solid rgba(251,191,36,0.25);
+  border-radius: var(--radius-sm);
+  padding: 0.6rem 0.85rem;
+  font-size:0.78rem;
+  color: var(--yellow);
+  margin-top: 0.5rem;
+  gap: 0.4rem;
+  align-items:flex-start;
+}
+#game-warning.show { display:flex; }
+
+/* ── EARLY WIN ───────────────────────────────────────── */
+#early-win-section { display:none; }
+#early-win-section.show { display:block; }
+#score-section.hidden { opacity:0.3; pointer-events:none; }
+
+.win-type-pills { display:flex; gap:0.5rem; flex-wrap:wrap; margin-top:0.4rem; }
+.win-pill {
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text-secondary);
+  font-family: var(--font-body);
+  font-size: 0.75rem;
+  font-weight: 500;
+  padding: 0.35rem 0.85rem;
+  border-radius: 99px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.win-pill:hover { border-color:var(--text-secondary); color:var(--text-primary); }
+.win-pill.active { border-color:var(--accent); color:var(--accent); background:var(--accent-soft); }
+.win-pill.military.active { border-color:var(--red); color:var(--red); background:var(--red-soft); }
+.win-pill.science.active  { border-color:var(--blue); color:var(--blue); background:var(--blue-soft); }
+.turn-hint { font-size:0.72rem; color:var(--text-tertiary); margin-top:0.35rem; }
+
+/* ── BULK BAR ────────────────────────────────────────── */
+.bulk-bar {
+  display: flex; align-items:center; gap:0.6rem; flex-wrap:wrap;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 0.65rem 1rem;
+  margin-bottom: 0.75rem;
+}
+.bulk-bar .bulk-label { color:var(--text-secondary); font-size:0.8rem; flex:1; min-width:120px; }
+.recalc-notice { font-size:0.72rem; color:var(--text-tertiary); margin-bottom:0.75rem; padding-left:0.25rem; }
+
+.cb-col { width:36px; text-align:center; }
+input[type=checkbox] { width:auto; accent-color:var(--accent); cursor:pointer; }
+
+/* ── SETTINGS ────────────────────────────────────────── */
+.stab-nav {
+  display:flex; gap:0;
+  border-bottom: 1px solid var(--border);
+  margin-bottom:1.5rem;
+}
+.stab-btn {
+  background: none; border:none;
+  border-bottom: 2px solid transparent;
+  color: var(--text-tertiary);
+  font-family: var(--font-body);
+  font-size: 0.82rem; font-weight:500;
+  padding: 0.6rem 1.1rem;
+  cursor:pointer; margin-bottom:-1px;
+  transition: all 0.15s;
+}
+.stab-btn:hover { color:var(--text-primary); }
+.stab-btn.active { color:var(--accent); border-bottom-color:var(--accent); }
+.stab-panel { display:none; }
+.stab-panel.active { display:block; }
+
+.setting-row {
+  display: grid;
+  grid-template-columns: 1fr auto auto auto auto;
+  gap: 0.6rem; align-items:center;
+  padding: 0.6rem 0;
+  border-bottom: 1px solid var(--border-sub);
+}
+.setting-row:last-child { border-bottom:none; }
+.gtag {
+  font-size: 0.7rem; font-weight:500;
+  color: var(--text-tertiary);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 99px;
+  padding: 0.15rem 0.6rem;
+  white-space:nowrap;
+}
+.gtag.warn { color:var(--yellow); border-color:rgba(251,191,36,0.3); background:var(--yellow-soft); }
+
+.player-row {
+  display:grid; grid-template-columns:1fr auto;
+  gap:0.6rem; align-items:center;
+  padding:0.6rem 0; border-bottom:1px solid var(--border-sub);
+}
+.player-row:last-child { border-bottom:none; }
+
+/* ── AI STATUS ───────────────────────────────────────── */
+.ai-status {
+  font-size: 0.75rem; color:var(--text-tertiary);
+  margin-top: 0.4rem; min-height:1rem;
+  display:flex; align-items:center; gap:0.4rem;
+}
+.ai-status.loading { color:var(--accent); }
+.ai-status.ok  { color:var(--green); }
+.ai-status.err { color:var(--red); }
+.spinner {
+  display:inline-block; width:10px; height:10px; flex-shrink:0;
+  border: 2px solid var(--border); border-top-color:var(--accent);
+  border-radius:50%; animation:spin 0.7s linear infinite;
+}
+@keyframes spin { to { transform:rotate(360deg); } }
+.field-filled { border-color:var(--accent) !important; box-shadow:0 0 0 3px var(--accent-soft) !important; }
+
+/* ── FILTER ROW ──────────────────────────────────────── */
+.filter-row { display:flex; gap:0.5rem; flex-wrap:wrap; margin-bottom:1rem; align-items:center; }
+.filter-row select { width:auto; min-width:150px; }
+
+/* ── HISTORY WRAP ────────────────────────────────────── */
+#history-wrap { max-height:600px; overflow-y:auto; }
+
+/* ── TOAST ───────────────────────────────────────────── */
+#toast {
+  position:fixed; bottom:1.5rem; right:1.5rem;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  color: var(--text-primary);
+  font-size: 0.83rem; font-weight:500;
+  padding: 0.7rem 1.1rem;
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
+  z-index:999; opacity:0;
+  transform:translateY(8px);
+  transition: all 0.2s ease;
+  pointer-events:none; max-width:320px;
+}
+#toast.show { opacity:1; transform:translateY(0); }
+#toast.error { border-color:rgba(248,113,113,0.4); color:var(--red); }
+
+/* ── MISC ────────────────────────────────────────────── */
+.muted { color:var(--text-secondary); }
+.small { font-size:0.78rem; }
+hr { border:none; border-top:1px solid var(--border-sub); margin:1rem 0; }
+.empty-state {
+  text-align:center; padding:3rem 1rem;
+  color: var(--text-tertiary); font-size:0.85rem;
+}
+.empty-state-icon { font-size:2rem; margin-bottom:0.75rem; opacity:0.4; }
+
+/* ── PREVIEW CARD ────────────────────────────────────── */
+#preview-body table { font-size:0.82rem; }
+#preview-body .preview-meta td { padding:0.3rem 0; color:var(--text-secondary); }
+#preview-body .preview-meta td:last-child { text-align:right; color:var(--text-primary); font-weight:500; }
+
+/* ══ MOBILE RESPONSIVE ═══════════════════════════════════ */
+@media(max-width:640px) {
+
+  /* layout & spacing */
+  main { padding: 1rem 0.875rem; }
+  .section-title { font-size:1.35rem; }
+  .section-header { margin-bottom:1rem; }
+
+  /* stat grid already 2x2 — just tighten gap on very small */
+  .stat-grid { gap:12px; }
+  .stat-box { padding:0.875rem 1rem; }
+  .stat-box .val { font-size:1.6rem; }
+  /* dash container respects 16px margin */
+  .dash-container { margin:0 0 16px; }
+  /* section header margin on mobile */
+  #dashboard .section-header { margin-left:0; margin-right:0; }
+
+  /* cards */
+  .card { padding:1rem; border-radius:var(--radius-sm); }
+  .card + .card { margin-top:1rem; }
+
+  /* tables — horizontal scroll with sticky first column */
+  .table-wrap { -webkit-overflow-scrolling:touch; }
+  table { font-size:0.78rem; }
+  th { padding:0.4rem 0.6rem; font-size:0.65rem; }
+  td { padding:0.5rem 0.6rem; }
+
+  /* ranking table — hide W/D/L on small screens */
+  #ranking-body td:last-child,
+  #ranking-body + thead th:last-child { display:none; }
+
+  /* history table — hide peso/margine on mobile */
+  #history-table th:nth-child(8),
+  #history-table th:nth-child(9),
+  #history-body td:nth-child(8),
+  #history-body td:nth-child(9) { display:none; }
+
+  /* form */
+  .form-group { margin-bottom:0.75rem; }
+  label { font-size:0.72rem; margin-bottom:0.3rem; }
+  input, select, textarea { font-size:0.875rem; padding:0.6rem 0.75rem; }
+  .inline-2 { grid-template-columns:1fr 1fr; gap:0.5rem; }
+  .inline-3 { grid-template-columns:1fr 1fr 1fr; gap:0.4rem; }
+
+  /* make submit button full width and tall for thumb tap */
+  #submit-match-btn { width:100%; padding:0.75rem; font-size:0.875rem; justify-content:center; }
+
+  /* chart */
+  .chart-wrap { height:200px; }
+
+  /* bulk bar — stack on 2 rows */
+  .bulk-bar { gap:0.4rem; padding:0.6rem 0.75rem; }
+  .bulk-bar .bulk-label { flex-basis:100%; order:-1; }
+
+  /* win pills — wrap naturally */
+  .win-type-pills { gap:0.4rem; }
+  .win-pill { font-size:0.72rem; padding:0.3rem 0.7rem; }
+
+  /* formula box — compact */
+  .formula-box { font-size:0.73rem; padding:0.75rem; line-height:1.7; }
+
+  /* settings rows */
+  .setting-row { grid-template-columns:1fr auto auto; gap:0.4rem; }
+  .setting-row .gtag:nth-child(2) { display:none; } /* hide skill tag on mobile */
+
+  /* stab buttons */
+  .stab-btn { padding:0.5rem 0.875rem; font-size:0.78rem; }
+
+  /* grid — force single column */
+  .grid-2 { grid-template-columns:1fr; gap:1rem; }
+}
+
+/* very small screens */
+@media(max-width:360px) {
+  .inline-3 { grid-template-columns:1fr; }
+  .stat-box { min-width:100%; }
+}
+
+/* ══ SYNC / GIST UI ════════════════════════════════════ */
+.sync-status {
+  display: flex; align-items: center; gap: 0.5rem;
+  font-size: 0.78rem; color: var(--text-tertiary);
+  padding: 0.5rem 0;
+}
+.sync-dot {
+  width: 7px; height: 7px; border-radius: 50%;
+  background: var(--text-tertiary); flex-shrink:0;
+  transition: background 0.3s;
+}
+.sync-dot.ok      { background: var(--green); }
+.sync-dot.syncing { background: var(--accent); animation: pulse 1s infinite; }
+.sync-dot.error   { background: var(--red); }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+
+/* conflict modal */
+.modal-overlay {
+  display: none; position: fixed; inset:0;
+  background: rgba(0,0,0,0.7); z-index:500;
+  align-items:center; justify-content:center;
+  padding: 1rem;
+}
+.modal-overlay.show { display:flex; }
+.modal {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 1.5rem;
+  max-width: 480px; width:100%;
+  box-shadow: var(--shadow-lg);
+}
+.modal-title {
+  font-family: var(--font-display);
+  font-size: 1.2rem; font-weight:400;
+  margin-bottom: 0.5rem;
+  color: var(--text-primary);
+}
+.modal-body { font-size:0.82rem; color:var(--text-secondary); line-height:1.6; margin-bottom:1.25rem; }
+.modal-cols { display:grid; grid-template-columns:1fr 1fr; gap:0.75rem; margin-bottom:1.25rem; }
+.modal-col {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 0.875rem;
+  font-size: 0.78rem; color: var(--text-secondary);
+}
+.modal-col strong { display:block; color:var(--text-primary); font-size:0.82rem; margin-bottom:0.4rem; }
+.modal-col .col-stat { color:var(--accent); font-family:var(--font-display); font-size:1.1rem; }
+.modal-actions { display:flex; gap:0.5rem; justify-content:flex-end; flex-wrap:wrap; }
+
+/* gist config section */
+.gist-config { display:flex; flex-direction:column; gap:0.75rem; }
+.gist-config .token-row { display:flex; gap:0.5rem; align-items:flex-end; }
+.gist-config .token-row input { flex:1; font-family:monospace; font-size:0.78rem; }
+.gist-hint { font-size:0.72rem; color:var(--text-tertiary); line-height:1.6; }
+.gist-hint a { color:var(--accent); text-decoration:none; }
+.gist-hint a:hover { text-decoration:underline; }
+</style>
+</head>
+<body>
+<div class="app-shell">
+
+<!-- ══ HEADER ══════════════════════════════════════════ -->
+<header>
+  <div class="header-inner">
+    <a class="logo" href="#">
+      <div class="logo-icon">♟</div>
+      <div>
+        <div class="logo-text">ELO Tracker</div>
+        <div class="logo-sub">Board Games Ranking</div>
+      </div>
+    </a>
+    <nav>
+      <button class="active" onclick="showSection('dashboard')">Dashboard</button>
+      <button onclick="showSection('add-match')">+ Partita</button>
+      <button onclick="showSection('history')">Storico</button>
+      <button onclick="showSection('settings')">Impostazioni</button>
+    </nav>
+  </div>
+</header>
+
+<!-- ══ BOTTOM TAB BAR (mobile only) ══════════════════════ -->
+<div class="bottom-nav" id="bottom-nav">
+  <button class="active" onclick="showSection('dashboard')">
+    <span class="tab-icon">📊</span>
+    Dashboard
+  </button>
+  <button onclick="showSection('add-match')">
+    <span class="tab-icon">✚</span>
+    Partita
+  </button>
+  <button onclick="showSection('history')">
+    <span class="tab-icon">📋</span>
+    Storico
+  </button>
+  <button onclick="showSection('settings')">
+    <span class="tab-icon">⚙</span>
+    Settings
+  </button>
+</div>
+
+<main>
+
+<!-- ══ DASHBOARD ════════════════════════════════════════ -->
+<div id="dashboard" class="section active">
+  <div class="section-header">
+    <div class="section-title">Classifica ELO</div>
+    <div id="dash-meta" class="section-meta"></div>
+  </div>
+
+  <!-- single dashboard container: 16px outer margin, 20px internal gaps -->
+  <div class="dash-container">
+
+    <!-- 4 stat cards in 2x2 grid -->
+    <div class="stat-grid" id="global-stats"></div>
+
+    <!-- ranking table: full width, horizontal scroll -->
+    <div class="dash-block">
+      <div class="card-title">Classifica Giocatori</div>
+      <div class="table-wrap rank-scroll">
+        <table class="rank-table">
+          <thead><tr>
+            <th>#</th>
+            <th>Giocatore</th>
+            <th>ELO</th>
+            <th>Partite</th>
+            <th>Win%</th>
+            <th>W / D / L</th>
+          </tr></thead>
+          <tbody id="ranking-body"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ELO chart: full width -->
+    <div class="dash-block">
+      <div class="card-title">Andamento ELO</div>
+      <div class="filter-row" style="margin-bottom:.75rem">
+        <select id="chart-player" onchange="renderChart()">
+          <option value="">Tutti i giocatori</option>
+        </select>
+      </div>
+      <div class="chart-wrap"><canvas id="eloChart"></canvas></div>
+    </div>
+
+    <!-- recent matches: full width -->
+    <div class="dash-block">
+      <div class="card-title">Ultime 10 Partite</div>
+      <div class="table-wrap" id="recent-matches"></div>
+    </div>
+
+  </div><!-- /dash-container -->
+</div>
+
+<!-- ══ ADD MATCH ════════════════════════════════════════ -->
+<div id="add-match" class="section">
+  <div class="section-header">
+    <div class="section-title">Registra Partita</div>
+  </div>
+
+  <div class="formula-box">
+    <strong>Formula ELO:</strong>
+    Peso = (Skill × Complexity) / 5 &nbsp;·&nbsp;
+    Margin = |P1−P2| / (P1+P2) &nbsp;·&nbsp;
+    ELO_new = ELO_old + <strong>K × Peso × (Risultato − E) × (1 + Margin)</strong><br>
+    <span style="font-size:.73rem;color:var(--text-tertiary)">Giochi di fortuna muovono poco l'ELO. Il margine amplifica la variazione. Le vittorie anticipate applicano un bonus ×1.3.</span>
+  </div>
+
+  <div class="grid-2">
+    <div class="card">
+      <div class="card-title">Dettagli Partita</div>
+
+      <div class="form-group">
+        <label>Data</label>
+        <input type="date" id="m-date">
+      </div>
+
+      <div class="form-group">
+        <label>Gioco</label>
+        <select id="m-game" onchange="onMatchGameChange()">
+          <option value="">Seleziona un gioco</option>
+        </select>
+        <div id="game-warning">
+          <span>⚠</span>
+          <span id="game-warning-text"></span>
+        </div>
+      </div>
+
+      <!-- EARLY WIN CONDITION -->
+      <div id="early-win-section" class="form-group">
+        <label>Tipo di vittoria</label>
+        <div class="win-type-pills">
+          <button type="button" class="win-pill active" data-wt="points" onclick="setWinType('points')">Punti finali</button>
+          <button type="button" class="win-pill military" data-wt="military" onclick="setWinType('military')">Vittoria militare</button>
+          <button type="button" class="win-pill science" data-wt="science" onclick="setWinType('science')">Progresso scientifico</button>
+        </div>
+      </div>
+
+      <div class="inline-2">
+        <div class="form-group">
+          <label>Giocatore 1</label>
+          <select id="m-p1" onchange="updatePreview()">
+            <option value="">Seleziona</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Giocatore 2</label>
+          <select id="m-p2" onchange="updatePreview()">
+            <option value="">Seleziona</option>
+          </select>
+        </div>
+      </div>
+
+      <div id="score-section" class="inline-3">
+        <div class="form-group">
+          <label>Punteggio G1</label>
+          <input type="number" id="m-s1" min="0" placeholder="0" oninput="updatePreview()">
+        </div>
+        <div class="form-group">
+          <label>Punteggio G2</label>
+          <input type="number" id="m-s2" min="0" placeholder="0" oninput="updatePreview()">
+        </div>
+        <div class="form-group">
+          <label>Risultato</label>
+          <select id="m-result" onchange="updatePreview()">
+            <option value="auto">Auto da punteggio</option>
+            <option value="1">Vince G1</option>
+            <option value="0">Vince G2</option>
+            <option value="0.5">Pareggio</option>
+          </select>
+        </div>
+      </div>
+
+      <div id="early-win-turn-section" class="form-group" style="display:none">
+        <label>Vincitore</label>
+        <select id="m-early-winner" onchange="updatePreview()">
+          <option value="">Seleziona il vincitore</option>
+        </select>
+        <div style="margin-top:0.75rem">
+          <label>Turno di fine &nbsp;<span id="turn-display" style="color:var(--accent);font-weight:600"></span></label>
+          <input type="range" id="m-end-turn" min="1" max="29" value="15"
+            oninput="document.getElementById('turn-display').textContent='('+this.value+'/29)'; updatePreview()">
+          <div class="turn-hint">Turno basso = vittoria rapida = maggior variazione ELO</div>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>Note (opzionali)</label>
+        <textarea id="m-notes" placeholder="Commenti sulla partita..."></textarea>
+      </div>
+
+      <button class="btn btn-primary" id="submit-match-btn" onclick="submitMatch()" style="width:100%;justify-content:center">
+        Registra Partita
+      </button>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Anteprima ELO</div>
+      <div id="preview-body">
+        <div class="empty-state">
+          <div class="empty-state-icon">⚡</div>
+          Seleziona gioco e giocatori per vedere l'anteprima
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ HISTORY ═══════════════════════════════════════════ -->
+<div id="history" class="section">
+  <div class="section-header">
+    <div class="section-title">Storico Partite</div>
+  </div>
+
+  <div class="filter-row">
+    <select id="filter-game" onchange="renderHistory()"><option value="">Tutti i giochi</option></select>
+    <select id="filter-player" onchange="renderHistory()"><option value="">Tutti i giocatori</option></select>
+  </div>
+
+  <div class="bulk-bar">
+    <span class="bulk-label" id="bulk-label">Seleziona le partite da eliminare</span>
+    <button class="btn btn-ghost btn-sm" onclick="selectAllVisible()">Seleziona tutti</button>
+    <button class="btn btn-ghost btn-sm" onclick="deselectAll()">Deseleziona</button>
+    <button class="btn btn-danger btn-sm" id="bulk-delete-btn" onclick="bulkDelete()">Elimina selezionate</button>
+    <button class="btn btn-danger btn-sm" id="clear-all-btn" onclick="confirmClearAll()">Elimina tutto</button>
+  </div>
+  <div class="recalc-notice">⚠ L'eliminazione ricalcola l'ELO dall'inizio — tutti i valori vengono ricostituiti in modo coerente.</div>
+
+  <div class="card">
+    <div id="history-wrap">
+      <div class="table-wrap">
+        <table id="history-table">
+          <thead><tr>
+            <th class="cb-col"><input type="checkbox" id="cb-all" onchange="toggleAll(this.checked)"></th>
+            <th>Data</th><th>Gioco</th><th>G1</th><th>Punteggio</th><th>G2</th>
+            <th>Vincitore</th><th>Peso</th><th>Margine</th><th>ΔELO</th>
+          </tr></thead>
+          <tbody id="history-body"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ SETTINGS ══════════════════════════════════════════ -->
+<div id="settings" class="section">
+  <div class="section-header">
+    <div class="section-title">Impostazioni</div>
+  </div>
+
+  <div class="stab-nav">
+    <button class="stab-btn active" onclick="showStab('stab-games')">Giochi</button>
+    <button class="stab-btn" onclick="showStab('stab-players')">Giocatori</button>
+    <button class="stab-btn" onclick="showStab('stab-sync')">Sync</button>
+  </div>
+
+  <div id="stab-games" class="stab-panel active">
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-title">Aggiungi / Modifica Gioco</div>
+        <div class="form-group">
+          <label>Nome Gioco</label>
+          <input type="text" id="g-name" placeholder="Es. Agricola" oninput="onGameNameInput()">
+          <div class="ai-status" id="ai-status"></div>
+        </div>
+        <div class="inline-2">
+          <div class="form-group">
+            <label>Skill Factor (0–1)</label>
+            <input type="number" id="g-skill" min="0" max="1" step="0.05" placeholder="generato da AI">
+          </div>
+          <div class="form-group">
+            <label>Complexity (1–5)</label>
+            <input type="number" id="g-complexity" min="1" max="5" step="0.5" placeholder="generato da AI">
+          </div>
+        </div>
+        <p style="font-size:0.75rem;color:var(--text-tertiary);margin-bottom:1rem;line-height:1.6">
+          <strong style="color:var(--text-secondary)">Skill Factor:</strong> 1.0 = pura abilità, 0.0 = pura fortuna.<br>
+          <strong style="color:var(--text-secondary)">Complexity:</strong> peso del gioco sull'ELO (1–5).<br>
+          I valori vengono stimati automaticamente da Claude AI.
+        </p>
+        <button class="btn btn-primary" onclick="saveGame()">Salva Gioco</button>
+      </div>
+      <div class="card">
+        <div class="card-title">Giochi Configurati</div>
+        <div id="games-list"></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="stab-players" class="stab-panel">
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-title">Aggiungi Giocatore</div>
+        <div class="form-group">
+          <label>Nome Giocatore</label>
+          <input type="text" id="p-name" placeholder="Es. Luca">
+        </div>
+        <p style="font-size:0.75rem;color:var(--text-tertiary);margin-bottom:1rem;line-height:1.6">
+          I giocatori si creano anche automaticamente alla prima partita registrata.
+        </p>
+        <button class="btn btn-primary" onclick="addPlayer()">Aggiungi</button>
+      </div>
+      <div class="card">
+        <div class="card-title">Giocatori Registrati</div>
+        <div id="players-list-settings"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SYNC PANEL -->
+  <div id="stab-sync" class="stab-panel">
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-title">Configurazione GitHub Gist</div>
+        <div class="gist-config">
+          <div class="form-group">
+            <label>GitHub Personal Access Token</label>
+            <div class="token-row">
+              <input type="password" id="gist-token" placeholder="ghp_xxxxxxxxxxxxxxxxxxxx" oninput="onGistConfigChange()">
+              <button class="btn btn-ghost btn-sm" onclick="toggleTokenVisibility()">Mostra</button>
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Gist ID <span style="color:var(--text-tertiary);font-weight:400">(lascia vuoto per crearne uno nuovo)</span></label>
+            <input type="text" id="gist-id" placeholder="Auto-generato al primo sync">
+          </div>
+          <div class="gist-hint">
+            1. Vai su <a href="https://github.com/settings/tokens/new" target="_blank">github.com/settings/tokens</a><br>
+            2. Genera un token con scope <strong>gist</strong><br>
+            3. Incollalo qui sopra e premi Salva<br>
+            4. Il Gist viene creato automaticamente al primo sync
+          </div>
+          <div style="display:flex;gap:0.5rem;flex-wrap:wrap">
+            <button class="btn btn-primary" onclick="saveGistConfig()">Salva configurazione</button>
+            <button class="btn btn-ghost" onclick="manualSync()">Sincronizza ora</button>
+          </div>
+          <div class="sync-status" id="sync-status">
+            <div class="sync-dot" id="sync-dot"></div>
+            <span id="sync-label">Non configurato</span>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">Stato Sync</div>
+        <div style="font-size:0.82rem;color:var(--text-secondary);line-height:1.8">
+          <p>La sync avviene automaticamente dopo ogni partita registrata o eliminata.</p>
+          <br>
+          <p id="sync-last-push" style="color:var(--text-tertiary)"></p>
+          <p id="sync-last-pull" style="color:var(--text-tertiary)"></p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+</main><!-- /main -->
+</div><!-- /app-shell -->
+<div id="toast"></div>
+
+<!-- CONFLICT MODAL -->
+<div class="modal-overlay" id="conflict-modal">
+  <div class="modal">
+    <div class="modal-title">Conflitto di sincronizzazione</div>
+    <div class="modal-body">
+      I dati locali e quelli sul Gist sono stati modificati in modo indipendente.
+      Scegli quale versione tenere — l'altra verrà sovrascritta.
+    </div>
+    <div class="modal-cols">
+      <div class="modal-col">
+        <strong>Dati locali</strong>
+        <div class="col-stat" id="conflict-local-matches">—</div>
+        <div>partite</div>
+        <div style="margin-top:.35rem;font-size:.72rem" id="conflict-local-date"></div>
+      </div>
+      <div class="modal-col">
+        <strong>Dati Gist (remoto)</strong>
+        <div class="col-stat" id="conflict-remote-matches">—</div>
+        <div>partite</div>
+        <div style="margin-top:.35rem;font-size:.72rem" id="conflict-remote-date"></div>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="resolveConflict('local')">Usa locale</button>
+      <button class="btn btn-primary" onclick="resolveConflict('remote')">Usa Gist</button>
+    </div>
+  </div>
+</div>
+
+<script>
+
+'use strict';
+
+// ============================================================
+//  STORAGE
+// ============================================================
+const STORAGE = {
+  matches: 'elo_matches',
+  elo:     'elo_ratings',
+  games:   'elo_games',
+  history: 'elo_history',
+  players: 'elo_players',
+};
+
+const DEFAULT_GAMES = [
+  { name:'7 Wonders Duel',      skill:0.85, complexity:4, collaborative:false, minPlayers:2, earlyWin:true, earlyWinTypes:['military','science'], maxTurns:29 },
+  { name:'Bears vs Babies',     skill:0.35, complexity:2, collaborative:false, minPlayers:2 },
+  { name:'Codex',               skill:0.80, complexity:4, collaborative:false, minPlayers:2 },
+  { name:'Dobble',              skill:0.10, complexity:1, collaborative:false, minPlayers:2 },
+  { name:'Here to Slay',        skill:0.55, complexity:2, collaborative:false, minPlayers:2 },
+  { name:'Othello',             skill:0.95, complexity:3, collaborative:false, minPlayers:2 },
+  { name:'Puerto Rico',         skill:0.75, complexity:5, collaborative:false, minPlayers:2 },
+  { name:'The Vale of Eternity',skill:0.60, complexity:3, collaborative:false, minPlayers:2 },
+  { name:'Tic Tac Toe KO',      skill:0.25, complexity:1, collaborative:false, minPlayers:2 },
+  { name:'Unstable Unicorns',   skill:0.40, complexity:2, collaborative:false, minPlayers:2 },
+  { name:'Wyrmspan',            skill:0.65, complexity:3, collaborative:false, minPlayers:1 },
+];
+const DEFAULT_PLAYERS = ['Giulia','Marco'];
+const K_BASE    = 32;
+const ELO_START = 1000;
+
+function load(key) {
+  try {
+    var raw = localStorage.getItem(key);
+    if (raw === null || raw === undefined) return null;
+    return JSON.parse(raw); // never coerce [] or {} to null
+  } catch(e) { return null; }
+}
+function save(key, val) { localStorage.setItem(key, JSON.stringify(val)); }
+
+function initStorage() {
+  if (!load(STORAGE.games))   save(STORAGE.games, DEFAULT_GAMES);
+  if (!load(STORAGE.matches)) save(STORAGE.matches, []);
+  if (!load(STORAGE.history)) save(STORAGE.history, {});
+  if (!load(STORAGE.players)) {
+    save(STORAGE.players, DEFAULT_PLAYERS);
+    const elos = load(STORAGE.elo) || {};
+    DEFAULT_PLAYERS.forEach(p => { if (!(p in elos)) elos[p] = ELO_START; });
+    save(STORAGE.elo, elos);
+  }
+  if (!load(STORAGE.elo)) {
+    const elos = {};
+    (load(STORAGE.players)||[]).forEach(p => { elos[p] = ELO_START; });
+    save(STORAGE.elo, elos);
+  }
+  // Migrate legacy games without new fields
+  const games = load(STORAGE.games) || [];
+  let migrated = false;
+  games.forEach(g => {
+    if (g.collaborative === undefined) { g.collaborative = false; migrated = true; }
+    if (g.minPlayers === undefined)    { g.minPlayers = 2;        migrated = true; }
+    if (g.earlyWin === undefined)      { g.earlyWin = false;      migrated = true; }
+    // Patch 7 Wonders Duel specifically if already saved without earlyWin
+    if (g.name === '7 Wonders Duel' && !g.earlyWin) {
+      g.earlyWin = true;
+      g.earlyWinTypes = ['military','science'];
+      g.maxTurns = 29;
+      migrated = true;
+    }
+  });
+  if (migrated) save(STORAGE.games, games);
+}
+
+// ============================================================
+//  ELO ENGINE
+// ============================================================
+function expectedScore(eloA, eloB) {
+  return 1 / (1 + Math.pow(10, (eloB - eloA) / 400));
+}
+
+// weight  = (skill x complexity) / 5  [0,1]
+// margin  = |sA-sB|/(sA+sB) for points victory
+//         = 1 - (endTurn/maxTurns) for early victory (military/science)
+// earlyMult = 1.3 bonus for early wins (domination is worth more)
+var EARLY_WIN_MULT  = 1.3;  // ELO bonus multiplier for early-win conditions
+var EARLY_WIN_TURNS = 29;   // max turns in 7 Wonders Duel
+
+function calcElo(eloA, eloB, result, skill, comp, sA, sB, winCondition, endTurn) {
+  var weight = (skill * comp) / 5;
+  var margin, earlyBonus;
+
+  if (winCondition === 'military' || winCondition === 'science') {
+    // Margin: inverse of turn ratio. Turn 5 of 25 -> 0.80. Turn 24 of 25 -> 0.04
+    var t = (endTurn && endTurn > 0) ? endTurn : 15;
+    margin     = Math.max(0, Math.min(1, 1 - (t / EARLY_WIN_TURNS)));
+    earlyBonus = EARLY_WIN_MULT;  // flat bonus for decisive early win
+  } else {
+    var total  = sA + sB;
+    margin     = total > 0 ? Math.abs(sA - sB) / total : 0;
+    earlyBonus = 1;
+  }
+
+  var eA   = expectedScore(eloA, eloB);
+  var eB   = 1 - eA;
+  var mult = K_BASE * weight * earlyBonus * (1 + margin);
+  return {
+    deltaA: mult * (result - eA),
+    deltaB: mult * ((1 - result) - eB),
+    weight, margin, earlyBonus, winCondition: winCondition || 'points', eA, eB
+  };
+}
+
+// ============================================================
+//  FULL ELO RECALCULATION FROM SCRATCH
+//  Iterates all remaining matches chronologically, starting
+//  every player at ELO_START. Ensures complete consistency
+//  after any deletion (single or bulk).
+// ============================================================
+function recalculateAllElo(matchList) {
+  // Sort by date asc, then by insertion id as tiebreaker
+  const sorted = [...matchList].sort((a, b) => {
+    if (a.date < b.date) return -1;
+    if (a.date > b.date) return 1;
+    return String(a.id) < String(b.id) ? -1 : 1;
+  });
+
+  // Reset every known player to ELO_START
+  const elos = {};
+  (load(STORAGE.players)||[]).forEach(p => { elos[p] = ELO_START; });
+
+  const hist = {};
+
+  const updated = sorted.map(m => {
+    if (!(m.p1 in elos)) elos[m.p1] = ELO_START;
+    if (!(m.p2 in elos)) elos[m.p2] = ELO_START;
+
+    const elo1 = elos[m.p1];
+    const elo2 = elos[m.p2];
+
+    const games = load(STORAGE.games)||[];
+    const game  = games.find(g => g.name === m.game);
+    const skill = game ? game.skill      : 0.5;
+    const comp  = game ? game.complexity : 3;
+
+    const { deltaA, deltaB, weight, margin, earlyBonus, eA, eB } =
+      calcElo(elo1, elo2, m.result, skill, comp, m.s1, m.s2,
+              m.winCondition || 'points', m.endTurn || 15);
+
+    elos[m.p1] = elo1 + deltaA;
+    elos[m.p2] = elo2 + deltaB;
+
+    if (!hist[m.p1]) hist[m.p1] = [];
+    if (!hist[m.p2]) hist[m.p2] = [];
+    hist[m.p1].push({ date: m.date, elo: elos[m.p1], matchId: m.id });
+    hist[m.p2].push({ date: m.date, elo: elos[m.p2], matchId: m.id });
+
+    return { ...m, elo1Before:elo1, elo2Before:elo2,
+      elo1After:elos[m.p1], elo2After:elos[m.p2],
+      deltaA, deltaB, weight, margin, earlyBonus, eA, eB };
+  });
+
+  // Round stored ELOs
+  Object.keys(elos).forEach(p => { elos[p] = Math.round(elos[p] * 10) / 10; });
+
+  save(STORAGE.elo,     elos);
+  save(STORAGE.history, hist);
+  save(STORAGE.matches, updated);
+}
+
+// ============================================================
+//  PLAYERS
+// ============================================================
+function getPlayers() { return load(STORAGE.players) || []; }
+
+function ensurePlayer(name) {
+  const players = getPlayers();
+  if (!players.includes(name)) {
+    players.push(name);
+    players.sort((a,b) => a.localeCompare(b));
+    save(STORAGE.players, players);
+  }
+  const elos = load(STORAGE.elo)||{};
+  if (!(name in elos)) { elos[name] = ELO_START; save(STORAGE.elo, elos); }
+}
+
+function addPlayer() {
+  const name = document.getElementById('p-name').value.trim();
+  if (!name) { toast('Inserisci un nome.'); return; }
+  ensurePlayer(name);
+  document.getElementById('p-name').value = '';
+  renderSettingsPlayers();
+  syncPlayerSelects();
+  toast('Giocatore "'+name+'" aggiunto.');
+}
+
+function deletePlayer(name) {
+  if (!confirm('Eliminare "'+name+'"?')) return;
+  save(STORAGE.players, getPlayers().filter(p => p !== name));
+  const elos = load(STORAGE.elo)||{};
+  delete elos[name];
+  save(STORAGE.elo, elos);
+  renderSettingsPlayers();
+  syncPlayerSelects();
+  toast('Giocatore eliminato.');
+}
+
+// ============================================================
+//  GAME WARNING (collaborative / too many players)
+// ============================================================
+function getGameWarning(game) {
+  if (!game) return null;
+  if (game.collaborative) return 'Gioco collaborativo -- non adatto al ranking competitivo 1vs1.';
+  if (game.minPlayers > 2) return 'Questo gioco richiede '+game.minPlayers+'+ giocatori -- non adatto al formato 1vs1.';
+  return null;
+}
+
+// onMatchGameChange defined above with earlyWin logic
+
+// ============================================================
+//  MATCH SUBMIT
+// ============================================================
+function getElo(p) { const e = load(STORAGE.elo)||{}; return e[p] ?? ELO_START; }
+
+function submitMatch() {
+  const date      = document.getElementById('m-date').value;
+  const gameName  = document.getElementById('m-game').value;
+  const p1        = document.getElementById('m-p1').value;
+  const p2        = document.getElementById('m-p2').value;
+  const s1        = parseFloat(document.getElementById('m-s1').value) || 0;
+  const s2        = parseFloat(document.getElementById('m-s2').value) || 0;
+  const resultSel = document.getElementById('m-result').value;
+  const notes     = document.getElementById('m-notes').value.trim();
+  // Early win fields
+  const winCondition = window._currentWinType || 'points';
+  const endTurn      = parseInt(document.getElementById('m-end-turn').value) || 15;
+  const earlyWinner  = document.getElementById('m-early-winner').value;
+
+  if (!date || !gameName || !p1 || !p2) { toast('Compila data, gioco e giocatori.'); return; }
+  if (p1 === p2) { toast('I due giocatori devono essere diversi.'); return; }
+
+  const game = (load(STORAGE.games)||[]).find(g => g.name === gameName);
+  if (!game) { toast('Gioco non trovato.'); return; }
+  if (getGameWarning(game)) { toast('Seleziona un gioco compatibile con il formato 1vs1.'); return; }
+
+  let result;
+  if (winCondition === 'military' || winCondition === 'science') {
+    // Early win: winner is selected from dropdown, not derived from score
+    if (!earlyWinner) { toast('Seleziona il vincitore della vittoria anticipata.'); return; }
+    result = earlyWinner === p1 ? 1 : 0;
+  } else if (resultSel==='auto') {
+    if(s1>s2) result=1; else if(s2>s1) result=0; else result=0.5;
+  } else {
+    result = parseFloat(resultSel);
+  }
+
+  ensurePlayer(p1); ensurePlayer(p2);
+  const elo1 = getElo(p1), elo2 = getElo(p2);
+  const { deltaA, deltaB, weight, margin, earlyBonus, eA, eB } =
+    calcElo(elo1, elo2, result, game.skill, game.complexity, s1, s2, winCondition, endTurn);
+
+  const newElo1 = elo1 + deltaA;
+  const newElo2 = elo2 + deltaB;
+
+  const elos = load(STORAGE.elo)||{};
+  elos[p1] = Math.round(newElo1*10)/10;
+  elos[p2] = Math.round(newElo2*10)/10;
+  save(STORAGE.elo, elos);
+
+  const matchId = Date.now().toString();
+  const matches = load(STORAGE.matches)||[];
+  matches.push({ id:matchId, date, game:gameName, p1, p2, s1, s2, result, notes,
+    winCondition, endTurn: (winCondition !== 'points' ? endTurn : null),
+    elo1Before:elo1, elo2Before:elo2, elo1After:newElo1, elo2After:newElo2,
+    deltaA, deltaB, weight, margin, earlyBonus, eA, eB });
+  save(STORAGE.matches, matches);
+
+  const hist = load(STORAGE.history)||{};
+  if (!hist[p1]) hist[p1]=[];
+  if (!hist[p2]) hist[p2]=[];
+  hist[p1].push({ date, elo:newElo1, matchId });
+  hist[p2].push({ date, elo:newElo2, matchId });
+  save(STORAGE.history, hist);
+
+  toast('Partita registrata!');
+  // Reset form
+  ['m-s1','m-s2','m-notes'].forEach(id => document.getElementById(id).value='');
+  document.getElementById('m-result').value='auto';
+  setWinType('points');
+  document.getElementById('preview-body').innerHTML=
+    '<div class="empty-state">Seleziona gioco e giocatori per vedere l\'anteprima ELO.</div>';
+  syncAll();
+  autoSync(); // push to Gist
+}
+
+// ============================================================
+//  EARLY WIN UI
+// ============================================================
+window._currentWinType = 'points';
+
+function setWinType(type) {
+  window._currentWinType = type;
+
+  // Update pill styles
+  document.querySelectorAll('.win-pill').forEach(function(p) {
+    p.classList.remove('active');
+    if (p.getAttribute('data-wt') === type) p.classList.add('active');
+  });
+
+  var isEarly = (type === 'military' || type === 'science');
+  var scoreSection = document.getElementById('score-section');
+  var turnSection  = document.getElementById('early-win-turn-section');
+
+  if (scoreSection) scoreSection.classList.toggle('hidden', isEarly);
+  if (turnSection)  turnSection.style.display = isEarly ? 'block' : 'none';
+
+  // Populate early winner select with current players
+  var p1 = document.getElementById('m-p1').value;
+  var p2 = document.getElementById('m-p2').value;
+  var ewSel = document.getElementById('m-early-winner');
+  if (ewSel) {
+    ewSel.innerHTML = '<option value="">-- seleziona --</option>' +
+      (p1 ? '<option value="'+p1+'">'+p1+'</option>' : '') +
+      (p2 ? '<option value="'+p2+'">'+p2+'</option>' : '');
+  }
+
+  // Init turn display
+  var turnEl = document.getElementById('m-end-turn');
+  var dispEl = document.getElementById('turn-display');
+  if (turnEl && dispEl) dispEl.textContent = '(' + turnEl.value + '/29)';
+
+  updatePreview();
+}
+
+function onMatchGameChange() {
+  var gameName = document.getElementById('m-game').value;
+  var game = (load(STORAGE.games)||[]).find(function(g){ return g.name === gameName; });
+  var warning = getGameWarning(game);
+  var box = document.getElementById('game-warning');
+  var btn = document.getElementById('submit-match-btn');
+  var ewSection = document.getElementById('early-win-section');
+
+  if (warning) {
+    document.getElementById('game-warning-text').textContent = warning;
+    box.classList.add('show');
+    btn.disabled = true;
+  } else {
+    box.classList.remove('show');
+    btn.disabled = false;
+  }
+
+  // Show early-win pills only for games that support it
+  if (ewSection) {
+    if (game && game.earlyWin) {
+      ewSection.classList.add('show');
+    } else {
+      ewSection.classList.remove('show');
+      setWinType('points');
+    }
+  }
+
+  updatePreview();
+}
+
+// ============================================================
+//  PREVIEW
+// ============================================================
+function updatePreview() {
+  const gameName = document.getElementById('m-game').value;
+  const p1 = document.getElementById('m-p1').value;
+  const p2 = document.getElementById('m-p2').value;
+  if (!gameName || !p1 || !p2 || p1===p2) return;
+  const game = (load(STORAGE.games)||[]).find(g => g.name===gameName);
+  if (!game || getGameWarning(game)) return;
+  const s1=parseFloat(document.getElementById('m-s1').value)||0;
+  const s2=parseFloat(document.getElementById('m-s2').value)||0;
+  const rs=document.getElementById('m-result').value;
+  let result;
+  const wt = window._currentWinType || 'points';
+  if (wt === 'military' || wt === 'science') {
+    const ew = document.getElementById('m-early-winner').value;
+    result = ew === p1 ? 1 : ew === p2 ? 0 : 0.5;
+  } else if(rs==='auto'){ if(s1>s2)result=1; else if(s2>s1)result=0; else result=0.5; }
+  else result=parseFloat(rs);
+  const et = parseInt(document.getElementById('m-end-turn').value) || 15;
+  const elo1=getElo(p1), elo2=getElo(p2);
+  const {deltaA,deltaB,weight,margin,earlyBonus}=calcElo(elo1,elo2,result,game.skill,game.complexity,s1,s2,wt,et);
+  const rl=result===1?'Vince <strong>'+p1+'</strong>':result===0?'Vince <strong>'+p2+'</strong>':'Pareggio';
+  var wcLabel = wt==='military' ? ' <span style="color:var(--red);font-size:.75rem">(vittoria militare)</span>' : wt==='science' ? ' <span style="color:var(--blue);font-size:.75rem">(progresso scientifico)</span>' : '';
+  document.getElementById('preview-body').innerHTML=
+    '<div style="margin-bottom:1rem;font-size:.85rem;color:var(--muted)">Esito: '+rl+wcLabel+'</div>'+
+    '<table class="preview-meta" style="width:100%;margin-bottom:.75rem">'+
+    '<tr class="preview-meta"><td>Peso partita</td><td style="text-align:right">'+weight.toFixed(3)+'</td></tr>'+
+    '<tr class="preview-meta"><td>Margine</td><td style="text-align:right">'+(margin*100).toFixed(1)+'%</td></tr>'+
+    (earlyBonus > 1 ? '<tr class="preview-meta"><td>Bonus vittoria anticipata</td><td style="color:var(--green)">x'+earlyBonus.toFixed(2)+'</td></tr>' : '')+
+    '</table><hr><table style="width:100%;font-size:.88rem">'+
+    '<thead><tr>'+
+    '<th style="text-align:left;font-size:.68rem;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;padding:.3rem 0">Giocatore</th>'+
+    '<th style="text-align:right;font-size:.68rem;color:var(--muted)">ELO ora</th>'+
+    '<th style="text-align:right;font-size:.68rem;color:var(--muted)">&Delta;</th>'+
+    '<th style="text-align:right;font-size:.68rem;color:var(--muted)">Nuovo</th>'+
+    '</tr></thead><tbody>'+pRow(p1,elo1,deltaA)+pRow(p2,elo2,deltaB)+'</tbody></table>';
+}
+function pRow(n,e,d){
+  var cls=d>=0?'pos':'neg',sign=d>=0?'+':'';
+  return '<tr><td style="padding:.5rem 0;font-weight:500">'+n+'</td>'+
+    '<td style="text-align:right;color:var(--text-secondary)">'+Math.round(e)+'</td>'+
+    '<td style="text-align:right" class="elo-delta '+cls+'">'+sign+d.toFixed(1)+'</td>'+
+    '<td style="text-align:right;font-family:var(--font-display);font-size:1.05rem">'+Math.round(e+d)+'</td></tr>';
+}
+
+// ============================================================
+//  DASHBOARD
+// ============================================================
+function renderDashboard() {
+  const matches=load(STORAGE.matches)||[];
+  const elos=load(STORAGE.elo)||{};
+  const games=load(STORAGE.games)||[];
+  const players=getPlayers();
+  document.getElementById('dash-meta').textContent=
+    matches.length+' partite * '+players.length+' giocatori * '+games.length+' giochi';
+  document.getElementById('global-stats').innerHTML=
+    '<div class="stat-box"><div class="val">'+matches.length+'</div><div class="lbl">Partite</div></div>'+
+    '<div class="stat-box"><div class="val">'+players.length+'</div><div class="lbl">Giocatori</div></div>'+
+    '<div class="stat-box"><div class="val">'+games.length+'</div><div class="lbl">Giochi</div></div>'+
+    '<div class="stat-box"><div class="val" style="font-size:1.1rem;word-break:break-word">'+topPlayer(elos)+'</div><div class="lbl">Leader</div></div>';
+  renderRanking(matches,elos);
+  renderChart();
+  renderRecentMatches(matches);
+}
+
+function topPlayer(elos){
+  const s=Object.entries(elos).sort((a,b)=>b[1]-a[1]);
+  return s[0]?.[0]??'--';
+}
+
+function buildStats(matches){
+  const s={};
+  matches.forEach(m=>{
+    [m.p1,m.p2].forEach(p=>{ if(!s[p]) s[p]={wins:0,draws:0,losses:0,games:0}; });
+    s[m.p1].games++; s[m.p2].games++;
+    if(m.result===1){s[m.p1].wins++;s[m.p2].losses++;}
+    else if(m.result===0){s[m.p2].wins++;s[m.p1].losses++;}
+    else{s[m.p1].draws++;s[m.p2].draws++;}
+  });
+  return s;
+}
+
+function renderRanking(matches,elos){
+  const st=buildStats(matches);
+  const all=[...new Set([...getPlayers(),...Object.keys(elos)])];
+  const sorted=all.map(p=>[p,elos[p]??ELO_START]).sort((a,b)=>b[1]-a[1]);
+  const medals=['gold','silver','bronze'];
+  document.getElementById('ranking-body').innerHTML=sorted.map(([name,elo],i)=>{
+    const s=st[name]||{wins:0,draws:0,losses:0,games:0};
+    const wr=s.games>0?s.wins/s.games:0;
+    const diff=elo-ELO_START;
+    const ds=diff>=0?'+'+diff.toFixed(0):diff.toFixed(0);
+    const dc=diff>=0?'pos':'neg';
+    return '<tr>'+
+      '<td><span class="rank-num '+(medals[i]||'')+'">'+(i+1)+'</span></td>'+
+      '<td>'+name+'</td>'+
+      '<td><span class="elo-value">'+Math.round(elo)+'</span> <span class="elo-delta '+dc+'">'+ds+'</span></td>'+
+      '<td class="muted">'+s.games+'</td>'+
+      '<td><div class="wr-bar"><div class="track"><div class="fill" style="width:'+(wr*100).toFixed(0)+'%"></div></div><span class="pct">'+(wr*100).toFixed(0)+'%</span></div></td>'+
+      '<td class="muted small">'+s.wins+'W/'+s.draws+'D/'+s.losses+'L</td></tr>';
+  }).join('')||'<tr><td colspan="6" class="empty-state">Nessun giocatore.</td></tr>';
+}
+
+let eloChartInst=null;
+function renderChart(){
+  const hist=load(STORAGE.history)||{};
+  const sel=document.getElementById('chart-player')?.value||'';
+  const canvas=document.getElementById('eloChart');
+  if(!canvas) return;
+  const players=sel?[sel]:getPlayers().filter(p=>hist[p]);
+  if(!players.length){ if(eloChartInst){eloChartInst.destroy();eloChartInst=null;} return; }
+  const allDates=[...new Set(players.flatMap(p=>(hist[p]||[]).map(h=>h.date)))].sort();
+  const COLORS=['#c8a84b','#7cb9e8','#e87c7c','#7ce87c','#e8a87c','#b07ce8','#7ce8e8','#e8e87c'];
+  const datasets=players.map((p,i)=>{
+    const map={}; (hist[p]||[]).forEach(h=>{map[h.date]=h.elo;});
+    let last=ELO_START;
+    return{label:p,data:allDates.map(d=>{if(map[d]!==undefined)last=map[d];return last;}),
+      borderColor:COLORS[i%COLORS.length],backgroundColor:'transparent',tension:0.35,pointRadius:4,pointHoverRadius:6};
+  });
+  if(eloChartInst) eloChartInst.destroy();
+  eloChartInst=new Chart(canvas,{type:'line',data:{labels:allDates,datasets},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{labels:{color:'#999',font:{family:'DM Sans',size:11}}}},
+      scales:{
+        x:{grid:{color:'rgba(255,255,255,0.05)'},ticks:{color:'#666',font:{family:'DM Sans',size:10}}},
+        y:{grid:{color:'rgba(255,255,255,0.05)'},ticks:{color:'#666',font:{family:'DM Sans',size:10}}}
+      }
+    }
+  });
+}
+
+function renderRecentMatches(matches){
+  const recent=[...matches].reverse().slice(0,10);
+  if(!recent.length){document.getElementById('recent-matches').innerHTML='<div class="empty-state">Nessuna partita.</div>';return;}
+  document.getElementById('recent-matches').innerHTML='<table><thead><tr><th>Data</th><th>Gioco</th><th>G1</th><th>Score</th><th>G2</th><th>Vincitore</th></tr></thead><tbody>'+
+    recent.map(m=>{
+      const w=m.result===1?m.p1:m.result===0?m.p2:'--';
+      const b=m.result===0.5?'<span class="badge badge-draw">Pareggio</span>':'<strong>'+w+'</strong>';
+      return'<tr><td class="muted small">'+m.date+'</td><td>'+m.game+'</td><td>'+m.p1+'</td>'+
+        '<td style="font-family:var(--font-display)">'+m.s1+' - '+m.s2+'</td><td>'+m.p2+'</td><td>'+b+'</td></tr>';
+    }).join('')+'</tbody></table>';
+}
+
+// ============================================================
+//  HISTORY
+//  Uses a plain array `selectedIds` (not a Set) to avoid
+//  any closure/reference issues with the disabled attribute.
+// ============================================================
+//  HISTORY - selezione e delete
+// ============================================================
+
+// Tiene traccia degli ID selezionati come Set globale
+var selectedIds = {};
+
+function renderHistory() {
+  var matches = load(STORAGE.matches) || [];
+  var fgEl = document.getElementById('filter-game');
+  var fpEl = document.getElementById('filter-player');
+  var fg = fgEl ? fgEl.value : '';
+  var fp = fpEl ? fpEl.value : '';
+
+  var list = matches.slice().reverse();
+  if (fg) list = list.filter(function(m){ return m.game === fg; });
+  if (fp) list = list.filter(function(m){ return m.p1 === fp || m.p2 === fp; });
+
+  if (list.length === 0) {
+    document.getElementById('history-body').innerHTML =
+      '<tr><td colspan="10" class="empty-state">Nessuna partita trovata.</td></tr>';
+    updateBulkBar();
+    return;
+  }
+
+  var html = '';
+  for (var i = 0; i < list.length; i++) {
+    var m = list[i];
+    var winner = m.result === 1 ? m.p1 : m.result === 0 ? m.p2 : null;
+    var wcIcon = m.winCondition === 'military' ? 'MIL' : m.winCondition === 'science' ? 'SCI' : '';
+    var badge  = m.result === 0.5
+      ? '<span class="badge badge-draw">Pari</span>'
+      : wcIcon === 'MIL' ? '<span class="badge badge-mil">' + winner + ' · MIL</span>'
+      : wcIcon === 'SCI' ? '<span class="badge badge-sci">' + winner + ' · SCI</span>'
+      : '<span class="badge badge-win">' + winner + '</span>';
+    var d1c = m.deltaA >= 0 ? 'pos' : 'neg';
+    var d2c = m.deltaB >= 0 ? 'pos' : 'neg';
+    var d1s = m.deltaA >= 0 ? '+' : '';
+    var d2s = m.deltaB >= 0 ? '+' : '';
+    var chk = selectedIds[m.id] ? 'checked' : '';
+    var w   = m.weight  != null ? m.weight.toFixed(3) : '--';
+    var mg  = m.margin  != null ? (m.margin * 100).toFixed(1) + '%' : '--';
+    var da  = m.deltaA  != null ? d1s + m.deltaA.toFixed(1) : '--';
+    var db  = m.deltaB  != null ? d2s + m.deltaB.toFixed(1) : '--';
+
+    html += '<tr>' +
+      '<td class="cb-col"><input type="checkbox" ' + chk + ' data-id="' + m.id + '" onchange="toggleOne(this)"></td>' +
+      '<td class="muted small">' + m.date + '</td>' +
+      '<td>' + m.game + '</td>' +
+      '<td>' + m.p1 + '</td>' +
+      '<td style="font-family:var(--font-display);text-align:center">' + m.s1 + ' - ' + m.s2 + '</td>' +
+      '<td>' + m.p2 + '</td>' +
+      '<td>' + badge + '</td>' +
+      '<td class="muted small">' + w + '</td>' +
+      '<td class="muted small">' + mg + '</td>' +
+      '<td class="small">' +
+        '<span class="elo-delta ' + d1c + '">' + da + '</span> / ' +
+        '<span class="elo-delta ' + d2c + '">' + db + '</span>' +
+      '</td>' +
+    '</tr>';
+  }
+
+  document.getElementById('history-body').innerHTML = html;
+  updateBulkBar();
+}
+
+function toggleOne(cb) {
+  var id = cb.getAttribute('data-id');
+  if (!id) return;
+  if (cb.checked) {
+    selectedIds[id] = true;
+  } else {
+    delete selectedIds[id];
+  }
+  var allCbs  = document.querySelectorAll('#history-body input[type=checkbox]');
+  var allChecked = allCbs.length > 0;
+  for (var i = 0; i < allCbs.length; i++) {
+    if (!allCbs[i].checked) { allChecked = false; break; }
+  }
+  var masterCb = document.getElementById('cb-all');
+  if (masterCb) masterCb.checked = allChecked;
+  updateBulkBar();
+}
+
+function toggleAll(checked) {
+  selectedIds = {};
+  var allCbs = document.querySelectorAll('#history-body input[type=checkbox]');
+  for (var i = 0; i < allCbs.length; i++) {
+    allCbs[i].checked = checked;
+    if (checked) {
+      var id = allCbs[i].getAttribute('data-id');
+      if (id) selectedIds[id] = true;
+    }
+  }
+  updateBulkBar();
+}
+
+function selectAllVisible() {
+  var masterCb = document.getElementById('cb-all');
+  if (masterCb) masterCb.checked = true;
+  toggleAll(true);
+}
+
+function deselectAll() {
+  var masterCb = document.getElementById('cb-all');
+  if (masterCb) masterCb.checked = false;
+  toggleAll(false);
+}
+
+function countSelected() {
+  return Object.keys(selectedIds).length;
+}
+
+function updateBulkBar() {
+  var n = countSelected();
+  var lbl = document.getElementById('bulk-label');
+  if (lbl) {
+    lbl.textContent = n > 0
+      ? n + (n > 1 ? ' partite selezionate' : ' partita selezionata')
+      : 'Seleziona le partite da eliminare';
+  }
+}
+
+function bulkDelete() {
+  var n = countSelected();
+  if (n === 0) {
+    alert('Nessuna partita selezionata.');
+    return;
+  }
+  if (!window.confirm('Eliminare ' + n + (n > 1 ? ' partite' : ' partita') + ' e ricalcolare l\'ELO?')) return;
+
+  var allMatches = load(STORAGE.matches) || [];
+  var remaining  = allMatches.filter(function(m) { return !selectedIds[m.id]; });
+
+  recalculateAllElo(remaining);
+
+  selectedIds = {};
+  var masterCb = document.getElementById('cb-all');
+  if (masterCb) masterCb.checked = false;
+
+  renderHistory();
+  renderDashboard();
+  autoSync(); // push to Gist
+  toast('Eliminate ' + n + ' partite. ELO ricalcolato.');
+}
+
+function confirmClearAll() {
+  if (!window.confirm('Eliminare TUTTE le partite e azzerare tutti gli ELO? Operazione irreversibile.')) return;
+
+  recalculateAllElo([]);
+
+  selectedIds = {};
+  var masterCb = document.getElementById('cb-all');
+  if (masterCb) masterCb.checked = false;
+
+  renderHistory();
+  renderDashboard();
+  autoSync(); // push to Gist
+  toast('Tutti i dati azzerati.');
+}
+
+// ============================================================
+//  SETTINGS - GAMES
+// ============================================================
+function renderSettingsGames() {
+  const games = load(STORAGE.games)||[];
+  document.getElementById('games-list').innerHTML = games.map(g => {
+    const warn = g.collaborative ? 'Collaborativo' : (g.minPlayers > 2 ? g.minPlayers+'+ giocatori' : null);
+    const warnTag = warn ? '<span class="gtag warn">(!!) '+warn+'</span>' : '';
+    return '<div class="setting-row">'+
+      '<span style="font-size:.88rem">'+g.name+'</span>'+
+      (warnTag||'<span class="gtag">Skill: '+g.skill.toFixed(2)+'</span>')+
+      '<span class="gtag" style="opacity:.7">C:'+g.complexity+'</span>'+
+      '<button class="btn btn-ghost btn-sm" onclick="editGame(\''+g.name.replace(/'/g,"\\'")+'\')" >[M]</button>'+
+      '<button class="btn btn-danger btn-sm" onclick="deleteGame(\''+g.name.replace(/'/g,"\\'")+'\')" >[X]</button>'+
+    '</div>';
+  }).join('') || '<div class="empty-state">Nessun gioco.</div>';
+}
+
+function editGame(name) {
+  const g = (load(STORAGE.games)||[]).find(g => g.name===name);
+  if (!g) return;
+  document.getElementById('g-name').value = g.name;
+  document.getElementById('g-skill').value = g.skill;
+  document.getElementById('g-complexity').value = g.complexity;
+  setAiStatus('','');
+  document.getElementById('g-name').focus();
+}
+
+function saveGame() {
+  const name       = document.getElementById('g-name').value.trim();
+  const skill      = parseFloat(document.getElementById('g-skill').value);
+  const complexity = parseFloat(document.getElementById('g-complexity').value);
+  if (!name) { toast('Inserisci il nome del gioco.'); return; }
+  if (isNaN(skill)||skill<0||skill>1) { toast('Skill Factor: valore 0-1.'); return; }
+  if (isNaN(complexity)||complexity<1||complexity>5) { toast('Complexity: valore 1-5.'); return; }
+
+  const games    = load(STORAGE.games)||[];
+  const idx      = games.findIndex(g => g.name.toLowerCase()===name.toLowerCase());
+  const existing = idx >= 0 ? games[idx] : {};
+  const meta     = window._aiGameMeta || {};
+
+  const updated = {
+    name, skill, complexity,
+    collaborative: meta.collaborative != null ? meta.collaborative : (existing.collaborative||false),
+    minPlayers:    meta.minPlayers    != null ? meta.minPlayers    : (existing.minPlayers||2),
+  };
+
+  if (idx >= 0) games[idx] = updated;
+  else games.push(updated);
+  games.sort((a,b) => a.name.localeCompare(b.name));
+  save(STORAGE.games, games);
+
+  ['g-name','g-skill','g-complexity'].forEach(id => document.getElementById(id).value='');
+  setAiStatus('','');
+  window._aiGameMeta = null;
+  renderSettingsGames(); syncGameSelects();
+  toast('Gioco "'+name+'" salvato.');
+}
+
+function deleteGame(name) {
+  if (!confirm('Eliminare il gioco "'+name+'"?')) return;
+  save(STORAGE.games, (load(STORAGE.games)||[]).filter(g => g.name!==name));
+  renderSettingsGames(); syncGameSelects();
+  toast('Gioco eliminato.');
+}
+
+// ============================================================
+//  AI GAME LOOKUP
+//  Debounced 800ms. Asks Claude API for:
+//  skill_factor, complexity, collaborative (bool), min_players.
+//  Blocks save if collaborative or min_players > 2.
+// ============================================================
+let aiLookupTimer = null;
+
+function onGameNameInput() {
+  const name = document.getElementById('g-name').value.trim();
+  clearTimeout(aiLookupTimer);
+  if (name.length < 3) { setAiStatus('',''); return; }
+
+  const exists = (load(STORAGE.games)||[]).some(g => g.name.toLowerCase()===name.toLowerCase());
+  if (exists) { setAiStatus('ok','Gioco gia presente in elenco.'); return; }
+
+  setAiStatus('loading','Ricerca parametri per "'+name+'"...');
+  aiLookupTimer = setTimeout(() => fetchGameParams(name), 800);
+}
+
+function setAiStatus(type, msg) {
+  const el = document.getElementById('ai-status');
+  el.className = 'ai-status' + (type?' '+type:'');
+  el.innerHTML = type==='loading'
+    ? '<span class="spinner"></span> '+msg
+    : msg;
+}
+
+async function fetchGameParams(gameName) {
+  const prompt =
+    'You are a board game expert. Analyze the board game "'+gameName+'" and return ONLY a JSON object with these fields:\n'+
+    '- skill_factor: float 0.0-1.0 (1.0 = pure skill, 0.0 = pure luck)\n'+
+    '- complexity: integer 1-5 (1 = trivial, 5 = very heavy)\n'+
+    '- collaborative: boolean (true if players cooperate against the game, false if competitive)\n'+
+    '- min_players: integer (minimum number of players for a proper game)\n'+
+    'If you are unsure, make a reasonable estimate. Reply ONLY with valid JSON, no markdown, no explanation.\n'+
+    'Example: {"skill_factor":0.75,"complexity":3,"collaborative":false,"min_players":2}';
+
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 120,
+        messages: [{ role:'user', content:prompt }]
+      })
+    });
+    if (!res.ok) throw new Error('HTTP '+res.status);
+    const data = await res.json();
+    const raw  = (data.content?.find(b => b.type==='text')?.text||'')
+                  .replace(/```[a-z]*/gi,'').replace(/```/g,'').trim();
+    const parsed = JSON.parse(raw);
+
+    const skill    = Math.min(1, Math.max(0, parseFloat(parsed.skill_factor)));
+    const comp     = Math.min(5, Math.max(1, Math.round(parseFloat(parsed.complexity))));
+    const collab   = !!parsed.collaborative;
+    const minP     = Math.max(1, Math.round(parseFloat(parsed.min_players)||2));
+
+    if (isNaN(skill)||isNaN(comp)) throw new Error('Valori non validi');
+
+    // Store extra fields so saveGame() can persist them
+    const games = load(STORAGE.games)||[];
+    const name  = document.getElementById('g-name').value.trim();
+    const idx   = games.findIndex(g => g.name.toLowerCase()===name.toLowerCase());
+    if (idx>=0) {
+      games[idx].collaborative = collab;
+      games[idx].minPlayers    = minP;
+    }
+    // Don't save yet - user must click "Salva". Cache in a temp var instead.
+    window._aiGameMeta = { collaborative:collab, minPlayers:minP };
+
+    // Populate fields
+    const skillEl = document.getElementById('g-skill');
+    const compEl  = document.getElementById('g-complexity');
+    skillEl.value = skill.toFixed(2);
+    compEl.value  = comp;
+    skillEl.classList.add('field-filled');
+    compEl.classList.add('field-filled');
+    setTimeout(() => {
+      skillEl.classList.remove('field-filled');
+      compEl.classList.remove('field-filled');
+    }, 1200);
+
+    // Build status message
+    let msg = '[OK] Parametri stimati';
+    if (collab)      msg += ' -- <span style="color:var(--warn)">(!!) Gioco collaborativo</span>';
+    else if (minP>2) msg += ' -- <span style="color:var(--warn)">(!!) Richiede '+minP+'+ giocatori</span>';
+    else             msg += ' -- puoi modificarli prima di salvare.';
+    setAiStatus('ok', msg);
+
+  } catch(e) {
+    console.warn('AI lookup error:', e);
+    window._aiGameMeta = null;
+    setAiStatus('err', 'Impossibile stimare i parametri -- inseriscili manualmente.');
+  }
+}
+
+// ============================================================
+//  SETTINGS - PLAYERS
+// ============================================================
+function renderSettingsPlayers() {
+  const players = getPlayers(), elos = load(STORAGE.elo)||{};
+  document.getElementById('players-list-settings').innerHTML = players.map(p =>
+    '<div class="player-row">'+
+    '<span>'+p+' <span class="muted small">-- ELO '+Math.round(elos[p]??ELO_START)+'</span></span>'+
+    '<button class="btn btn-danger btn-sm" onclick="deletePlayer(\''+p.replace(/'/g,"\\'")+'\')" >[X]</button>'+
+    '</div>'
+  ).join('') || '<div class="empty-state">Nessun giocatore.</div>';
+}
+
+// ============================================================
+//  SYNC HELPERS
+// ============================================================
+function syncGameSelects() {
+  const games = load(STORAGE.games)||[];
+
+  // Match form: mark incompatible games with (!!) prefix and disable them
+  const mGame = document.getElementById('m-game');
+  if (mGame) {
+    const c = mGame.value;
+    mGame.innerHTML = '<option value="">-- seleziona gioco --</option>' +
+      games.map(g => {
+        const w = getGameWarning(g);
+        const label = w ? '(!!) '+g.name : g.name;
+        // We don't disable the option (browser support varies) - warning box handles blocking
+        return '<option '+(g.name===c?'selected':'')+' value="'+g.name+'"'+(w?' class="opt-blocked"':'')+'>'+label+'</option>';
+      }).join('');
+  }
+
+  // History filter
+  const fg = document.getElementById('filter-game');
+  if (fg) {
+    const c = fg.value;
+    fg.innerHTML = '<option value="">Tutti i giochi</option>' +
+      games.map(g => '<option '+(g.name===c?'selected':'')+' value="'+g.name+'">'+g.name+'</option>').join('');
+  }
+}
+
+function syncPlayerSelects() {
+  const players = getPlayers();
+  ['m-p1','m-p2'].forEach(id => {
+    const sel = document.getElementById(id); if (!sel) return;
+    const c = sel.value;
+    sel.innerHTML = '<option value="">-- seleziona --</option>' +
+      players.map(p => '<option '+(p===c?'selected':'')+' value="'+p+'">'+p+'</option>').join('');
+  });
+  const cs = document.getElementById('chart-player');
+  if (cs) {
+    const c = cs.value;
+    cs.innerHTML = '<option value="">-- tutti --</option>' +
+      players.map(p => '<option '+(p===c?'selected':'')+' value="'+p+'">'+p+'</option>').join('');
+  }
+  const fp = document.getElementById('filter-player');
+  if (fp) {
+    const c = fp.value;
+    fp.innerHTML = '<option value="">Tutti i giocatori</option>' +
+      players.map(p => '<option '+(p===c?'selected':'')+' value="'+p+'">'+p+'</option>').join('');
+  }
+}
+
+function syncAll() {
+  syncGameSelects();
+  syncPlayerSelects();
+  renderDashboard();
+  renderHistory();
+}
+
+// ============================================================
+//  SETTINGS SUB-TABS / NAV
+// ============================================================
+function showStab(id) {
+  document.querySelectorAll('.stab-panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.stab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  var idx = {'stab-games':0,'stab-players':1,'stab-sync':2};
+  var btn = document.querySelectorAll('.stab-btn')[idx[id]];
+  if (btn) btn.classList.add('active');
+  if (id === 'stab-sync') renderSyncPanel();
+}
+
+function showSection(id) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('nav button, .bottom-nav button').forEach(b => b.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  var idx = {dashboard:0,'add-match':1,history:2,settings:3};
+  var i = idx[id];
+  var desktopBtns = document.querySelectorAll('nav button');
+  var bottomBtns  = document.querySelectorAll('.bottom-nav button');
+  if (desktopBtns[i]) desktopBtns[i].classList.add('active');
+  if (bottomBtns[i])  bottomBtns[i].classList.add('active');
+  window.scrollTo({top:0, behavior:'smooth'});
+  if (id==='dashboard') renderDashboard();
+  if (id==='history')   { syncGameSelects(); syncPlayerSelects(); renderHistory(); }
+  if (id==='settings')  { renderSettingsGames(); renderSettingsPlayers(); }
+  if (id==='add-match') { syncGameSelects(); syncPlayerSelects(); }
+}
+
+// ============================================================
+//  TOAST
+// ============================================================
+let toastTimer;
+function toast(msg, isError=false) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = 'show' + (isError?' error':'');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.className='', 2800);
+}
+
+// ============================================================
+//  INIT
+// ============================================================
+
+// ============================================================
+//  GITHUB GIST SYNC
+//
+//  Strategy:
+//  - All app data is bundled into one JSON object (snapshot)
+//    and stored as a single file inside a private Gist.
+//  - Every snapshot includes a `savedAt` ISO timestamp.
+//  - On push: serialize local data -> PATCH gist file.
+//  - On conflict (both local and remote changed since last
+//    known sync): show modal, let user choose.
+//  - Config (token + gistId) stored in localStorage only.
+// ============================================================
+
+var GIST_STORAGE = {
+  token:    'elo_gist_token',
+  gistId:   'elo_gist_id',
+  lastSync: 'elo_last_sync',   // ISO timestamp of last successful push
+};
+var GIST_FILENAME = 'elo-tracker-data.json';
+var _conflictRemoteSnapshot = null; // held during conflict modal
+
+// ── helpers ──────────────────────────────────────────────────
+function gistToken()  { return localStorage.getItem(GIST_STORAGE.token)  || ''; }
+function gistId()     { return localStorage.getItem(GIST_STORAGE.gistId) || ''; }
+function gistLastSync(){ return localStorage.getItem(GIST_STORAGE.lastSync) || ''; }
+
+function setSyncStatus(state, msg) {
+  var dot = document.getElementById('sync-dot');
+  var lbl = document.getElementById('sync-label');
+  if (!dot || !lbl) return;
+  dot.className = 'sync-dot ' + (state || '');
+  lbl.textContent = msg || '';
+}
+
+// ── build / apply snapshot ────────────────────────────────────
+function buildSnapshot() {
+  return {
+    savedAt:  new Date().toISOString(),
+    matches:  load(STORAGE.matches)  || [],
+    elo:      load(STORAGE.elo)      || {},
+    games:    load(STORAGE.games)    || DEFAULT_GAMES,
+    history:  load(STORAGE.history)  || {},
+    players:  load(STORAGE.players)  || DEFAULT_PLAYERS,
+  };
+}
+
+function applySnapshot(snap) {
+  if (!snap) return;
+  if (snap.matches  !== undefined) save(STORAGE.matches,  snap.matches);
+  if (snap.elo      !== undefined) save(STORAGE.elo,      snap.elo);
+  if (snap.games    !== undefined) save(STORAGE.games,    snap.games);
+  if (snap.history  !== undefined) save(STORAGE.history,  snap.history);
+  if (snap.players  !== undefined) save(STORAGE.players,  snap.players);
+  localStorage.setItem(GIST_STORAGE.lastSync, snap.savedAt || new Date().toISOString());
+  syncAll();
+}
+
+// ── API calls ─────────────────────────────────────────────────
+async function gistRequest(method, path, body) {
+  var token = gistToken();
+  if (!token) throw new Error('Token non configurato');
+  var opts = {
+    method: method,
+    headers: {
+      'Authorization': 'Bearer ' + token,
+      'Content-Type':  'application/json',
+      'Accept':        'application/vnd.github+json',
+      'X-GitHub-Api-Version': '2022-11-28',
+    },
+  };
+  if (body) opts.body = JSON.stringify(body);
+  var res = await fetch('https://api.github.com/gists' + (path || ''), opts);
+  if (!res.ok) {
+    var err = await res.json().catch(() => ({}));
+    throw new Error((err.message || 'HTTP ' + res.status));
+  }
+  return res.json();
+}
+
+// ── push local data to gist ───────────────────────────────────
+async function pushToGist(snapshot) {
+  var snap = snapshot || buildSnapshot();
+  var content = JSON.stringify(snap, null, 2);
+  var id = gistId();
+  var data;
+  if (id) {
+    // update existing gist
+    data = await gistRequest('PATCH', '/' + id, {
+      files: { [GIST_FILENAME]: { content: content } }
+    });
+  } else {
+    // create new gist
+    data = await gistRequest('POST', '', {
+      description: 'ELO Board Games Tracker data',
+      public: false,
+      files: { [GIST_FILENAME]: { content: content } }
+    });
+    localStorage.setItem(GIST_STORAGE.gistId, data.id);
+    var gistIdEl = document.getElementById('gist-id');
+    if (gistIdEl) gistIdEl.value = data.id;
+  }
+  localStorage.setItem(GIST_STORAGE.lastSync, snap.savedAt);
+  return data;
+}
+
+// ── pull remote snapshot from gist ───────────────────────────
+async function pullFromGist() {
+  var id = gistId();
+  if (!id) return null;
+  var data = await gistRequest('GET', '/' + id);
+  var file = data.files && data.files[GIST_FILENAME];
+  if (!file || !file.content) return null;
+  return JSON.parse(file.content);
+}
+
+// ── main sync entry point (called after every write) ─────────
+async function autoSync() {
+  if (!gistToken()) return; // not configured, silently skip
+  setSyncStatus('syncing', 'Sincronizzazione...');
+  try {
+    var remote = await pullFromGist();
+    var localSnap = buildSnapshot();
+    var lastSync  = gistLastSync();
+
+    if (remote && remote.savedAt && lastSync) {
+      var remoteNewer = remote.savedAt > lastSync;
+      var localNewer  = localSnap.savedAt > lastSync;
+
+      // both modified since last sync -> conflict
+      if (remoteNewer && localNewer) {
+        _conflictRemoteSnapshot = remote;
+        showConflictModal(localSnap, remote);
+        setSyncStatus('error', 'Conflitto — scegli quale versione usare');
+        return;
+      }
+      // only remote is newer -> pull
+      if (remoteNewer && !localNewer) {
+        applySnapshot(remote);
+        setSyncStatus('ok', 'Sincronizzato ' + fmtTime(new Date()));
+        updateSyncPanel();
+        return;
+      }
+    }
+
+    // local is newer (or no remote yet) -> push
+    await pushToGist(localSnap);
+    localStorage.setItem(GIST_STORAGE.lastSync, localSnap.savedAt);
+    setSyncStatus('ok', 'Sincronizzato ' + fmtTime(new Date()));
+    updateSyncPanel();
+
+  } catch(e) {
+    console.warn('Sync error:', e);
+    setSyncStatus('error', 'Errore: ' + e.message);
+  }
+}
+
+// ── conflict resolution ───────────────────────────────────────
+function showConflictModal(local, remote) {
+  document.getElementById('conflict-local-matches').textContent  =
+    (local.matches  || []).length;
+  document.getElementById('conflict-remote-matches').textContent =
+    (remote.matches || []).length;
+  document.getElementById('conflict-local-date').textContent  =
+    local.savedAt  ? 'Salvato: ' + fmtDateTime(local.savedAt)  : '';
+  document.getElementById('conflict-remote-date').textContent =
+    remote.savedAt ? 'Salvato: ' + fmtDateTime(remote.savedAt) : '';
+  document.getElementById('conflict-modal').classList.add('show');
+}
+
+async function resolveConflict(winner) {
+  document.getElementById('conflict-modal').classList.remove('show');
+  setSyncStatus('syncing', 'Risoluzione conflitto...');
+  try {
+    if (winner === 'remote' && _conflictRemoteSnapshot) {
+      applySnapshot(_conflictRemoteSnapshot);
+      await pushToGist(_conflictRemoteSnapshot); // ensure gist matches
+    } else {
+      // keep local, push to gist
+      var snap = buildSnapshot();
+      await pushToGist(snap);
+      localStorage.setItem(GIST_STORAGE.lastSync, snap.savedAt);
+    }
+    setSyncStatus('ok', 'Sincronizzato ' + fmtTime(new Date()));
+    updateSyncPanel();
+    _conflictRemoteSnapshot = null;
+  } catch(e) {
+    setSyncStatus('error', 'Errore: ' + e.message);
+  }
+}
+
+// ── manual sync button ────────────────────────────────────────
+async function manualSync() {
+  if (!gistToken()) { toast('Configura prima il token GitHub.'); return; }
+  await autoSync();
+  toast('Sincronizzazione completata.');
+}
+
+// ── config UI ────────────────────────────────────────────────
+function saveGistConfig() {
+  var token = (document.getElementById('gist-token').value || '').trim();
+  var id    = (document.getElementById('gist-id').value    || '').trim();
+  if (!token) { toast('Inserisci il token GitHub.'); return; }
+  localStorage.setItem(GIST_STORAGE.token,  token);
+  if (id) localStorage.setItem(GIST_STORAGE.gistId, id);
+  toast('Configurazione salvata. Sincronizzazione in corso...');
+  autoSync();
+}
+
+function toggleTokenVisibility() {
+  var el = document.getElementById('gist-token');
+  if (!el) return;
+  el.type = el.type === 'password' ? 'text' : 'password';
+}
+
+function onGistConfigChange() {
+  // no-op: just validates on save
+}
+
+function renderSyncPanel() {
+  var tokenEl = document.getElementById('gist-token');
+  var idEl    = document.getElementById('gist-id');
+  if (tokenEl && gistToken()) tokenEl.value = gistToken();
+  if (idEl    && gistId())    idEl.value    = gistId();
+  updateSyncPanel();
+  if (gistToken()) setSyncStatus('ok', 'Configurato');
+  else             setSyncStatus('',   'Non configurato');
+}
+
+function updateSyncPanel() {
+  var lastSync = gistLastSync();
+  var pushEl = document.getElementById('sync-last-push');
+  var pullEl = document.getElementById('sync-last-pull');
+  var gid    = gistId();
+  if (pushEl) pushEl.textContent = lastSync
+    ? 'Ultima sync: ' + fmtDateTime(lastSync) : '';
+  if (pullEl) pullEl.textContent = gid
+    ? 'Gist ID: ' + gid : '';
+}
+
+// ── date formatters ───────────────────────────────────────────
+function fmtTime(d) {
+  return d.toLocaleTimeString('it-IT', {hour:'2-digit', minute:'2-digit'});
+}
+function fmtDateTime(iso) {
+  try {
+    var d = new Date(iso);
+    return d.toLocaleDateString('it-IT') + ' ' + fmtTime(d);
+  } catch(e) { return iso; }
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+  initStorage();
+  document.getElementById('m-date').valueAsDate = new Date();
+  syncGameSelects();
+  syncPlayerSelects();
+  renderDashboard();
+  updateBulkBar();
+  // Check Gist on startup: pull if remote is newer, show sync status
+  if (gistToken()) {
+    setSyncStatus('syncing', 'Controllo aggiornamenti...');
+    autoSync();
+  }
+});
+
+</script>
+</body>
+</html>
