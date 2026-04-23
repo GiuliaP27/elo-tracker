@@ -451,6 +451,8 @@ input[type=checkbox] { width: auto; height: auto; accent-color: var(--accent); c
 
 /* ── TABLE ───────────────────────────────────────────── */
 .table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+#recent-matches th,
+#recent-matches td { white-space: nowrap; }
 table { width: 100%; border-collapse: collapse; font-size: var(--text-sm); }
 th {
   text-align: left;
@@ -851,6 +853,7 @@ hr { border:none; border-top:0.5px solid var(--border-subtle); margin:var(--sp-4
   border: 0.5px solid var(--border-default);
   border-radius: var(--radius-md);
   padding: var(--sp-4);
+  margin-bottom: 12px;
   cursor: pointer;
   transition: background 0.12s, border-color 0.12s;
   -webkit-tap-highlight-color: transparent;
@@ -2094,7 +2097,7 @@ function renderH2H() {
 function renderRecentMatches(matches){
   const recent=[...matches].reverse().slice(0,10);
   if(!recent.length){document.getElementById('recent-matches').innerHTML='<div class="empty-state">Nessuna partita.</div>';return;}
-  document.getElementById('recent-matches').innerHTML='<table><thead><tr><th>Data</th><th>Gioco</th><th>G1</th><th>Score</th><th>G2</th><th>Vincitore</th></tr></thead><tbody>'+
+  document.getElementById('recent-matches').innerHTML='<table style="table-layout:auto;width:100%"><thead><tr><th>Data</th><th>Gioco</th><th>G1</th><th>Score</th><th>G2</th><th>Vincitore</th></tr></thead><tbody>'+
     recent.map(m=>{
       const w=m.result===1?m.p1:m.result===0?m.p2:'--';
       const b=m.result===0.5?'<span class="badge badge-draw">Pareggio</span>':'<strong>'+w+'</strong>';
