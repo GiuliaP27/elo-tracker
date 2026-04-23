@@ -7,7 +7,6 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&display=swap" rel="stylesheet">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <style>
 /* ═══════════════════════════════════════════════════════
    RIVO — design system aligned to Claude iOS mobile app
@@ -475,15 +474,23 @@ tbody tr:last-child td { border-bottom: none; }
 
 /* ── RANKING ─────────────────────────────────────────── */
 .rank-medal {
-  width: 26px; height: 26px;
+  width: 28px; height: 28px;
   border-radius: 50%;
   display: inline-flex; align-items: center; justify-content: center;
-  font-size: var(--text-xs); font-weight: 700; flex-shrink: 0;
+  font-size: 18px; font-weight: 700; flex-shrink: 0;
+  line-height: 1;
 }
-.rank-medal.gold   { background: rgba(251,191,36,0.15); color:#fbbf24; border:0.5px solid rgba(251,191,36,0.35); }
-.rank-medal.silver { background: rgba(156,163,175,0.12); color:#9ca3af; border:0.5px solid rgba(156,163,175,0.25); }
-.rank-medal.bronze { background: rgba(180,120,80,0.12); color:#b47850; border:0.5px solid rgba(180,120,80,0.25); }
-.rank-medal.plain  { background: var(--bg-subtle); color:var(--text-low); border:0.5px solid var(--border-strong); }
+/* top 3: emoji, no background needed */
+.rank-medal.gold, .rank-medal.silver, .rank-medal.bronze {
+  background: none; border: none;
+}
+/* others: numbered circle */
+.rank-medal.plain {
+  font-size: var(--text-xs);
+  background: var(--bg-subtle);
+  color: var(--text-low);
+  border: 0.5px solid var(--border-strong);
+}
 .elo-value { font-family:var(--font-display); font-size:var(--text-base); font-weight:600; color:var(--text-high); }
 .elo-delta { font-size:var(--text-xs); font-weight:600; }
 .elo-delta.pos { color:var(--color-success); }
@@ -506,7 +513,7 @@ tbody tr:last-child td { border-bottom: none; }
 .badge-sci  { background:var(--color-info-subtle); color:var(--color-info); border:0.5px solid rgba(96,165,250,0.2); }
 
 /* ── CHART ───────────────────────────────────────────── */
-.chart-wrap { position:relative; height:240px; }
+/* chart-wrap removed */
 
 /* ── FORMULA BOX ─────────────────────────────────────── */
 .formula-box {
@@ -714,7 +721,7 @@ hr { border:none; border-top:0.5px solid var(--border-subtle); margin:var(--sp-4
   .stat-box .val { font-size:1.6rem; }
   .stat-box .lbl { font-size:10px; }
   .dash-block { padding:var(--sp-3) var(--sp-4); }
-  .chart-wrap { height:190px; }
+
 
   /* cards */
   .card { padding:var(--sp-4); border-radius:var(--radius-md); }
@@ -961,6 +968,117 @@ hr { border:none; border-top:0.5px solid var(--border-subtle); margin:var(--sp-4
   color: var(--text-mid);
   margin-bottom: var(--sp-1);
 }
+
+/* ── RANKING CARDS ──────────────────────────────────── */
+.rank-list { display: flex; flex-direction: column; gap: var(--sp-2); }
+
+.rank-card {
+  display: flex; align-items: center;
+  gap: var(--sp-3);
+  padding: var(--sp-3) var(--sp-4);
+  background: var(--bg-overlay);
+  border-radius: var(--radius-sm);
+}
+.rank-card:first-child { background: var(--bg-subtle); }
+
+.rank-card__body { flex: 1; min-width: 0; }
+
+.rank-card__top {
+  display: flex; align-items: baseline;
+  justify-content: space-between;
+  gap: var(--sp-2);
+  margin-bottom: 6px;
+}
+.rank-card__name {
+  font-size: var(--text-base);
+  font-weight: 600;
+  color: var(--text-high);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.rank-card__elo {
+  display: flex; align-items: baseline; gap: 4px; flex-shrink: 0;
+}
+.rank-elo-val {
+  font-family: var(--font-display);
+  font-size: var(--text-md);
+  font-weight: 600;
+  color: var(--text-high);
+  letter-spacing: -0.02em;
+}
+
+.rank-card__bottom {
+  display: flex; align-items: center; gap: var(--sp-2);
+}
+.rank-card__bottom .wr-bar { flex: 1; }
+.rank-card__stats {
+  font-size: var(--text-xs);
+  color: var(--text-low);
+  white-space: nowrap; flex-shrink: 0;
+}
+.rank-stat-w { color: var(--color-success); font-weight: 600; }
+.rank-stat-l { color: var(--color-danger);  font-weight: 600; }
+.rank-stat-d { color: var(--text-low); }
+
+/* ── HEAD-TO-HEAD ───────────────────────────────────── */
+.h2h-card {
+  padding: var(--sp-3) 0;
+  border-bottom: 0.5px solid var(--border-subtle);
+}
+.h2h-card:last-child { border-bottom: none; }
+
+.h2h-names {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: var(--sp-2);
+}
+.h2h-name {
+  font-size: var(--text-sm); font-weight: 500;
+  color: var(--text-low);
+  flex: 1;
+}
+.h2h-name--right { text-align: right; }
+.h2h-name--lead { color: var(--text-high); font-weight: 700; }
+.h2h-total {
+  font-size: var(--text-xs); color: var(--text-muted);
+  flex-shrink: 0; text-align: center; padding: 0 var(--sp-2);
+}
+
+.h2h-bar {
+  display: flex; height: 28px;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  gap: 2px;
+  margin-bottom: 6px;
+}
+.h2h-seg {
+  display: flex; align-items: center; justify-content: center;
+  font-size: 11px; font-weight: 700;
+  min-width: 20px;
+  transition: width 0.4s ease;
+}
+.h2h-seg--a {
+  background: var(--accent);
+  color: #fff;
+  border-radius: var(--radius-sm) 0 0 var(--radius-sm);
+}
+.h2h-seg--d {
+  background: var(--bg-subtle);
+  color: var(--text-low);
+}
+.h2h-seg--b {
+  background: var(--color-info);
+  color: #fff;
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+}
+
+.h2h-labels {
+  display: flex; justify-content: space-between; align-items: center;
+}
+.h2h-label {
+  font-size: var(--text-xs); font-weight: 600;
+}
+.h2h-label--a { color: var(--accent); }
+.h2h-label--d { color: var(--text-low); font-weight: 400; }
+.h2h-label--b { color: var(--color-info); }
 </style>
 </head>
 <body>
@@ -1053,30 +1171,13 @@ hr { border:none; border-top:0.5px solid var(--border-subtle); margin:var(--sp-4
     <!-- ranking table: full width, horizontal scroll -->
     <div class="dash-block">
       <div class="card-title">Classifica Giocatori</div>
-      <div class="table-wrap rank-scroll">
-        <table class="rank-table">
-          <thead><tr>
-            <th>#</th>
-            <th>Giocatore</th>
-            <th>ELO</th>
-            <th>Partite</th>
-            <th>Win%</th>
-            <th>W / D / L</th>
-          </tr></thead>
-          <tbody id="ranking-body"></tbody>
-        </table>
-      </div>
+      <div id="ranking-body" class="rank-list"></div>
     </div>
 
-    <!-- ELO chart: full width -->
+    <!-- Head-to-head -->
     <div class="dash-block">
-      <div class="card-title">Andamento ELO</div>
-      <div class="filter-row" style="margin-bottom:.75rem">
-        <select id="chart-player" onchange="renderChart()">
-          <option value="">Tutti i giocatori</option>
-        </select>
-      </div>
-      <div class="chart-wrap"><canvas id="eloChart"></canvas></div>
+      <div class="card-title">Testa a testa</div>
+      <div id="h2h-body"></div>
     </div>
 
     <!-- recent matches: full width -->
@@ -1313,31 +1414,31 @@ hr { border:none; border-top:0.5px solid var(--border-subtle); margin:var(--sp-4
   <!-- SYNC PANEL -->
   <div id="stab-sync" class="stab-panel">
     <div class="grid-2">
+
+      <!-- COLONNA 1: token + gist config -->
       <div class="card">
-        <div class="card-title">Configurazione GitHub Gist</div>
+        <div class="card-title">Configurazione Token</div>
         <div class="gist-config">
           <div class="form-group">
             <label>GitHub Personal Access Token</label>
             <div class="token-row">
               <input type="password" id="gist-token" placeholder="ghp_xxxxxxxxxxxxxxxxxxxx" oninput="onGistConfigChange()">
               <button class="btn btn-ghost icon-btn" id="toggle-token-btn" onclick="toggleTokenVisibility()" title="Mostra/nascondi token" style="width:40px;height:40px;flex-shrink:0">
-              <svg id="eye-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/>
-                <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/>
-                <line x1="1" y1="1" x2="23" y2="23"/>
-              </svg>
-            </button>
+                <svg id="eye-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/>
+                  <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/>
+                  <line x1="1" y1="1" x2="23" y2="23"/>
+                </svg>
+              </button>
             </div>
           </div>
           <div class="form-group">
-            <label>Gist ID <span style="color:var(--text-tertiary);font-weight:400">(lascia vuoto per crearne uno nuovo)</span></label>
+            <label>Gist ID <span style="color:var(--text-low);font-weight:400">(lascia vuoto per crearne uno nuovo)</span></label>
             <input type="text" id="gist-id" placeholder="Auto-generato al primo sync">
           </div>
           <div class="gist-hint">
-            1. Vai su <a href="https://github.com/settings/tokens/new" target="_blank">github.com/settings/tokens</a><br>
-            2. Genera un token con scope <strong>gist</strong><br>
-            3. Incollalo qui sopra e premi Salva<br>
-            4. Il Gist viene creato automaticamente al primo sync
+            Genera un token su <a href="https://github.com/settings/tokens/new" target="_blank">github.com/settings/tokens</a>
+            con scope <strong>repo</strong> + <strong>gist</strong>. Un token solo per entrambe le funzioni.
           </div>
           <div style="display:flex;gap:8px;flex-wrap:nowrap">
             <button class="btn btn-primary sync-cta" onclick="saveGistConfig()">Salva</button>
@@ -1349,16 +1450,49 @@ hr { border:none; border-top:0.5px solid var(--border-subtle); margin:var(--sp-4
           </div>
         </div>
       </div>
+
+      <!-- COLONNA 2: deploy su GitHub Pages -->
       <div class="card">
-        <div class="card-title">Stato Sync</div>
-        <div style="font-size:0.82rem;color:var(--text-secondary);line-height:1.8">
-          <p>La sync avviene automaticamente dopo ogni partita registrata o eliminata.</p>
-          <br>
-          <p id="sync-last-push" style="color:var(--text-tertiary)"></p>
-          <p id="sync-last-pull" style="color:var(--text-tertiary)"></p>
+        <div class="card-title">Pubblica su GitHub Pages</div>
+        <div class="gist-config">
+          <div class="form-group">
+            <label>Username GitHub</label>
+            <input type="text" id="gh-username" placeholder="es. giulia27">
+          </div>
+          <div class="form-group">
+            <label>Nome repository</label>
+            <input type="text" id="gh-repo" placeholder="es. rivo-tracker">
+          </div>
+          <div class="form-group">
+            <label>Nome file <span style="color:var(--text-low);font-weight:400">(di solito index.html)</span></label>
+            <input type="text" id="gh-filename" placeholder="index.html" value="index.html">
+          </div>
+          <div class="gist-hint">
+            Carica direttamente il file HTML aggiornato su GitHub Pages senza aprire il browser.
+            Usa il token con scope <strong>repo</strong> configurato a sinistra.
+          </div>
+          <button class="btn btn-primary" onclick="deployToPages()" id="deploy-btn">
+            Pubblica aggiornamento
+          </button>
+          <div class="sync-status" id="deploy-status" style="margin-top:var(--sp-2)">
+            <div class="sync-dot" id="deploy-dot"></div>
+            <span id="deploy-label">Non configurato</span>
+          </div>
         </div>
       </div>
+
     </div>
+
+    <!-- Stato sync -->
+    <div class="card" style="margin-top:var(--sp-4)">
+      <div class="card-title">Stato</div>
+      <div style="font-size:var(--text-sm);color:var(--text-mid);line-height:1.8">
+        <p>La sync dati avviene automaticamente dopo ogni partita registrata o eliminata.</p>
+        <p id="sync-last-push" style="color:var(--text-low);margin-top:var(--sp-2)"></p>
+        <p id="sync-last-pull" style="color:var(--text-low)"></p>
+      </div>
+    </div>
+
   </div>
 
 </div>
@@ -1717,7 +1851,7 @@ function setWinType(type) {
   var p2 = document.getElementById('m-p2').value;
   var ewSel = document.getElementById('m-early-winner');
   if (ewSel) {
-    ewSel.innerHTML = '<option value="">-- seleziona --</option>' +
+    ewSel.innerHTML = '<option value="">Seleziona</option>' +
       (p1 ? '<option value="'+p1+'">'+p1+'</option>' : '') +
       (p2 ? '<option value="'+p2+'">'+p2+'</option>' : '');
   }
@@ -1848,49 +1982,113 @@ function renderRanking(matches,elos){
   const st=buildStats(matches);
   const all=[...new Set([...getPlayers(),...Object.keys(elos)])];
   const sorted=all.map(p=>[p,elos[p]??ELO_START]).sort((a,b)=>b[1]-a[1]);
-  const medals=['gold','silver','bronze'];
+  const medals=['gold','silver','bronze','plain'];
+  if(!sorted.length){
+    document.getElementById('ranking-body').innerHTML='<div class="empty-state">Nessun giocatore.</div>';
+    return;
+  }
   document.getElementById('ranking-body').innerHTML=sorted.map(([name,elo],i)=>{
     const s=st[name]||{wins:0,draws:0,losses:0,games:0};
     const wr=s.games>0?s.wins/s.games:0;
     const diff=elo-ELO_START;
     const ds=diff>=0?'+'+diff.toFixed(0):diff.toFixed(0);
     const dc=diff>=0?'pos':'neg';
-    return '<tr>'+
-      '<td><span class="rank-num '+(medals[i]||'')+'">'+(i+1)+'</span></td>'+
-      '<td>'+name+'</td>'+
-      '<td><span class="elo-value">'+Math.round(elo)+'</span> <span class="elo-delta '+dc+'">'+ds+'</span></td>'+
-      '<td class="muted">'+s.games+'</td>'+
-      '<td><div class="wr-bar"><div class="track"><div class="fill" style="width:'+(wr*100).toFixed(0)+'%"></div></div><span class="pct">'+(wr*100).toFixed(0)+'%</span></div></td>'+
-      '<td class="muted small">'+s.wins+'W/'+s.draws+'D/'+s.losses+'L</td></tr>';
-  }).join('')||'<tr><td colspan="6" class="empty-state">Nessun giocatore.</td></tr>';
+    const medal=medals[i]||'plain';
+    return '<div class="rank-card">'+
+      // Position medal
+      '<span class="rank-medal '+medal+'">'+( medal==='gold'?'🥇':medal==='silver'?'🥈':medal==='bronze'?'🥉':(i+1))+'</span>'+
+      // Main content
+      '<div class="rank-card__body">'+
+        // Top row: name + ELO
+        '<div class="rank-card__top">'+
+          '<span class="rank-card__name">'+name+'</span>'+
+          '<div class="rank-card__elo">'+
+            '<span class="rank-elo-val">'+Math.round(elo)+'</span>'+
+            '<span class="elo-delta '+dc+'">'+ds+'</span>'+
+          '</div>'+
+        '</div>'+
+        // Win bar + stats
+        '<div class="rank-card__bottom">'+
+          '<div class="wr-bar">'+
+            '<div class="track"><div class="fill" style="width:'+(wr*100).toFixed(0)+'%"></div></div>'+
+          '</div>'+
+          '<span class="rank-card__stats">'+
+            '<span class="rank-stat-w">'+s.wins+'V</span>'+
+            ' · '+
+            '<span class="rank-stat-d">'+s.draws+'P</span>'+
+            ' · '+
+            '<span class="rank-stat-l">'+s.losses+'S</span>'+
+            ' · '+
+            s.games+' partite'+
+          '</span>'+
+        '</div>'+
+      '</div>'+
+    '</div>';
+  }).join('');
 }
 
-let eloChartInst=null;
-function renderChart(){
-  const hist=load(STORAGE.history)||{};
-  const sel=document.getElementById('chart-player')?.value||'';
-  const canvas=document.getElementById('eloChart');
-  if(!canvas) return;
-  const players=sel?[sel]:getPlayers().filter(p=>hist[p]);
-  if(!players.length){ if(eloChartInst){eloChartInst.destroy();eloChartInst=null;} return; }
-  const allDates=[...new Set(players.flatMap(p=>(hist[p]||[]).map(h=>h.date)))].sort();
-  const COLORS=['#c8a84b','#7cb9e8','#e87c7c','#7ce87c','#e8a87c','#b07ce8','#7ce8e8','#e8e87c'];
-  const datasets=players.map((p,i)=>{
-    const map={}; (hist[p]||[]).forEach(h=>{map[h.date]=h.elo;});
-    let last=ELO_START;
-    return{label:p,data:allDates.map(d=>{if(map[d]!==undefined)last=map[d];return last;}),
-      borderColor:COLORS[i%COLORS.length],backgroundColor:'transparent',tension:0.35,pointRadius:4,pointHoverRadius:6};
-  });
-  if(eloChartInst) eloChartInst.destroy();
-  eloChartInst=new Chart(canvas,{type:'line',data:{labels:allDates,datasets},
-    options:{responsive:true,maintainAspectRatio:false,
-      plugins:{legend:{labels:{color:'#999',font:{family:'DM Sans',size:11}}}},
-      scales:{
-        x:{grid:{color:'rgba(255,255,255,0.05)'},ticks:{color:'#666',font:{family:'DM Sans',size:10}}},
-        y:{grid:{color:'rgba(255,255,255,0.05)'},ticks:{color:'#666',font:{family:'DM Sans',size:10}}}
-      }
+// Head-to-head matrix: for each unique pair compute W/D/L
+function renderChart() {
+  renderH2H();
+}
+
+function renderH2H() {
+  var el = document.getElementById('h2h-body');
+  if (!el) return;
+  var matches = load(STORAGE.matches) || [];
+  var players = getPlayers();
+
+  if (matches.length === 0 || players.length < 2) {
+    el.innerHTML = '<div class="empty-state">Gioca almeno una partita per vedere i confronti.</div>';
+    return;
+  }
+
+  // Build pair stats
+  var pairs = {};
+  matches.forEach(function(m) {
+    var key = [m.p1, m.p2].sort().join('|||');
+    if (!pairs[key]) pairs[key] = { a: [m.p1,m.p2].sort()[0], b: [m.p1,m.p2].sort()[1], wins_a:0, wins_b:0, draws:0 };
+    var pr = pairs[key];
+    if (m.result === 0.5) {
+      pr.draws++;
+    } else {
+      var winner = m.result === 1 ? m.p1 : m.p2;
+      if (winner === pr.a) pr.wins_a++; else pr.wins_b++;
     }
   });
+
+  var html = '';
+  Object.values(pairs).forEach(function(pr) {
+    var total = pr.wins_a + pr.wins_b + pr.draws;
+    if (total === 0) return;
+    var pctA = Math.round(pr.wins_a / total * 100);
+    var pctB = Math.round(pr.wins_b / total * 100);
+    var pctD = 100 - pctA - pctB;
+    // who leads
+    var leaderA = pr.wins_a > pr.wins_b;
+    var leaderB = pr.wins_b > pr.wins_a;
+
+    html +=
+      '<div class="h2h-card">' +
+        '<div class="h2h-names">' +
+          '<span class="h2h-name' + (leaderA ? ' h2h-name--lead' : '') + '">' + pr.a + '</span>' +
+          '<span class="h2h-total">' + total + ' ' + (total === 1 ? 'partita' : 'partite') + '</span>' +
+          '<span class="h2h-name h2h-name--right' + (leaderB ? ' h2h-name--lead' : '') + '">' + pr.b + '</span>' +
+        '</div>' +
+        '<div class="h2h-bar">' +
+          (pctA > 0 ? '<div class="h2h-seg h2h-seg--a" style="width:' + pctA + '%">' + pr.wins_a + '</div>' : '') +
+          (pctD > 0 ? '<div class="h2h-seg h2h-seg--d" style="width:' + pctD + '%">' + (pr.draws > 0 ? pr.draws : '') + '</div>' : '') +
+          (pctB > 0 ? '<div class="h2h-seg h2h-seg--b" style="width:' + pctB + '%">' + pr.wins_b + '</div>' : '') +
+        '</div>' +
+        '<div class="h2h-labels">' +
+          '<span class="h2h-label h2h-label--a">' + pctA + '%</span>' +
+          (pr.draws > 0 ? '<span class="h2h-label h2h-label--d">' + pctD + '% pari</span>' : '') +
+          '<span class="h2h-label h2h-label--b">' + pctB + '%</span>' +
+        '</div>' +
+      '</div>';
+  });
+
+  el.innerHTML = html || '<div class="empty-state">Nessun confronto diretto disponibile.</div>';
 }
 
 function renderRecentMatches(matches){
@@ -2430,7 +2628,7 @@ function syncGameSelects() {
   const mGame = document.getElementById('m-game');
   if (mGame) {
     const c = mGame.value;
-    mGame.innerHTML = '<option value="">-- seleziona gioco --</option>' +
+    mGame.innerHTML = '<option value="">Gioco</option>' +
       games.map(g => {
         const w = getGameWarning(g);
         const label = w ? '(!!) '+g.name : g.name;
@@ -2453,13 +2651,13 @@ function syncPlayerSelects() {
   ['m-p1','m-p2'].forEach(id => {
     const sel = document.getElementById(id); if (!sel) return;
     const c = sel.value;
-    sel.innerHTML = '<option value="">-- seleziona --</option>' +
+    sel.innerHTML = '<option value="">Seleziona</option>' +
       players.map(p => '<option '+(p===c?'selected':'')+' value="'+p+'">'+p+'</option>').join('');
   });
   const cs = document.getElementById('chart-player');
   if (cs) {
     const c = cs.value;
-    cs.innerHTML = '<option value="">-- tutti --</option>' +
+    cs.innerHTML = '<option value="">Tutti</option>' +
       players.map(p => '<option '+(p===c?'selected':'')+' value="'+p+'">'+p+'</option>').join('');
   }
   const fp = document.getElementById('filter-player');
@@ -2758,6 +2956,7 @@ function renderSyncPanel() {
   updateSyncPanel();
   if (gistToken()) setSyncStatus('ok', 'Configurato');
   else             setSyncStatus('',   'Non configurato');
+  renderDeployPanel();
 }
 
 function updateSyncPanel() {
@@ -2780,6 +2979,123 @@ function fmtDateTime(iso) {
     var d = new Date(iso);
     return d.toLocaleDateString('it-IT') + ' ' + fmtTime(d);
   } catch(e) { return iso; }
+}
+
+
+// ============================================================
+//  DEPLOY TO GITHUB PAGES
+//  Uses GitHub Contents API to PUT the current HTML file
+//  directly into the repo, triggering Pages rebuild.
+//  Requires token with scope: repo
+// ============================================================
+
+var DEPLOY_STORAGE = {
+  username: 'gh_username',
+  repo:     'gh_repo',
+  filename: 'gh_filename',
+};
+
+function setDeployStatus(state, msg) {
+  var dot = document.getElementById('deploy-dot');
+  var lbl = document.getElementById('deploy-label');
+  if (!dot || !lbl) return;
+  dot.className = 'sync-dot ' + (state || '');
+  lbl.textContent = msg || '';
+}
+
+async function deployToPages() {
+  var token    = gistToken();
+  var username = (document.getElementById('gh-username').value || '').trim();
+  var repo     = (document.getElementById('gh-repo').value     || '').trim();
+  var filename = (document.getElementById('gh-filename').value || 'index.html').trim();
+
+  if (!token)    { toast('Configura prima il token GitHub.'); return; }
+  if (!username) { toast('Inserisci il tuo username GitHub.'); return; }
+  if (!repo)     { toast('Inserisci il nome del repository.'); return; }
+
+  // Save config
+  localStorage.setItem(DEPLOY_STORAGE.username, username);
+  localStorage.setItem(DEPLOY_STORAGE.repo,     repo);
+  localStorage.setItem(DEPLOY_STORAGE.filename, filename);
+
+  setDeployStatus('syncing', 'Recupero versione attuale...');
+
+  try {
+    var apiBase = 'https://api.github.com/repos/' + username + '/' + repo + '/contents/' + filename;
+    var headers = {
+      'Authorization': 'Bearer ' + token,
+      'Accept':        'application/vnd.github+json',
+      'X-GitHub-Api-Version': '2022-11-28',
+    };
+
+    // Step 1: get current SHA (needed for update)
+    var sha = null;
+    var getRes = await fetch(apiBase, { headers: headers });
+    if (getRes.ok) {
+      var fileData = await getRes.json();
+      sha = fileData.sha;
+    } else if (getRes.status !== 404) {
+      throw new Error('Errore lettura file: HTTP ' + getRes.status);
+    }
+
+    setDeployStatus('syncing', 'Caricamento in corso...');
+
+    // Step 2: get the current page HTML via fetch of itself
+    // We fetch the current document's full HTML as a string
+    var currentHtml = '<!DOCTYPE html>' + String.fromCharCode(10) + document.documentElement.outerHTML;
+
+    // Base64 encode
+    var encoded = btoa(unescape(encodeURIComponent(currentHtml)));
+
+    // Step 3: PUT to GitHub
+    var body = {
+      message: 'Update rivo-tracker ' + new Date().toISOString().slice(0,16).replace('T',' '),
+      content: encoded,
+    };
+    if (sha) body.sha = sha;
+
+    var putRes = await fetch(apiBase, {
+      method:  'PUT',
+      headers: Object.assign({ 'Content-Type': 'application/json' }, headers),
+      body:    JSON.stringify(body),
+    });
+
+    if (!putRes.ok) {
+      var err = await putRes.json().catch(() => ({}));
+      throw new Error(err.message || 'HTTP ' + putRes.status);
+    }
+
+    var pagesUrl = 'https://' + username + '.github.io/' + repo + '/';
+    setDeployStatus('ok', 'Pubblicato! Pages si aggiorna in ~1 min');
+    toast('Pubblicato su GitHub Pages.');
+    // Show link
+    var lbl = document.getElementById('deploy-label');
+    if (lbl) lbl.innerHTML =
+      'Pubblicato! <a href="' + pagesUrl + '" target="_blank" style="color:var(--accent)">' +
+      pagesUrl + '</a>';
+
+  } catch(e) {
+    console.warn('Deploy error:', e);
+    setDeployStatus('error', 'Errore: ' + e.message);
+    toast('Deploy fallito: ' + e.message, true);
+  }
+}
+
+function renderDeployPanel() {
+  var u = localStorage.getItem(DEPLOY_STORAGE.username) || '';
+  var r = localStorage.getItem(DEPLOY_STORAGE.repo)     || '';
+  var f = localStorage.getItem(DEPLOY_STORAGE.filename) || 'index.html';
+  var uEl = document.getElementById('gh-username');
+  var rEl = document.getElementById('gh-repo');
+  var fEl = document.getElementById('gh-filename');
+  if (uEl && u) uEl.value = u;
+  if (rEl && r) rEl.value = r;
+  if (fEl)      fEl.value = f;
+  if (gistToken() && u && r) {
+    setDeployStatus('ok', 'Configurato — pronto per il deploy');
+  } else {
+    setDeployStatus('', 'Configura token e repository');
+  }
 }
 
 document.addEventListener('DOMContentLoaded', function() {
